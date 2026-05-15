@@ -62,6 +62,13 @@ import org.springframework.security.core.userdetails.User;
 @Table(name = "m_appuser", uniqueConstraints = @UniqueConstraint(columnNames = { "username" }, name = "username_org"))
 public class AppUser extends AbstractPersistableCustom<Long> implements PlatformUser {
 
+    // Keep a concrete Long-returning accessor for legacy binaries (e.g. Pentaho plugin)
+    // that link against AppUser.getId():Long.
+    @Override
+    public Long getId() {
+        return super.getId();
+    }
+
     @Getter
     @Column(name = "email", nullable = false, length = 100)
     private String email;
