@@ -41,4 +41,11 @@ public class PaymentDetailData implements Serializable {
     private final String routingCode;
     private final String receiptNumber;
     private final String bankNumber;
+    // Depositor information fields
+    private final String depositorName;
+    private final String depositorNationality;
+    private final String depositorIdType;
+    private final String depositorIdNumber;
+    private final String depositorIdIssuedAt;
+    private final String depositorPurpose;
 }

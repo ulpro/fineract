@@ -110,7 +110,7 @@ public class SavingsProductDataValidator {
             minOverdraftForInterestCalculationParamName, SavingsApiConstants.minRequiredBalanceParamName,
             SavingsApiConstants.enforceMinRequiredBalanceParamName, SavingsApiConstants.maxAllowedLienLimitParamName,
             SavingsApiConstants.lienAllowedParamName, minBalanceForInterestCalculationParamName, withHoldTaxParamName,
-            taxGroupIdParamName));
+            taxGroupIdParamName, "kycTierId"));
 
     public void validateForCreate(final String json) {
 
@@ -273,6 +273,10 @@ public class SavingsProductDataValidator {
         }
         validateTaxWithHoldingParams(baseDataValidator, element, true);
         validateLienParams(baseDataValidator, element);
+        if (this.fromApiJsonHelper.parameterExists("kycTierId", element)) {
+            final Long kycTierId = this.fromApiJsonHelper.extractLongNamed("kycTierId", element);
+            baseDataValidator.reset().parameter("kycTierId").value(kycTierId).ignoreIfNull().longGreaterThanZero();
+        }
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 

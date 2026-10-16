@@ -149,6 +149,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+
 @Configuration
 public class SavingsConfiguration {
 
@@ -426,9 +428,10 @@ public class SavingsConfiguration {
             SavingsProductRepository savingProductRepository, SavingsProductDataValidator fromApiJsonDataValidator,
             SavingsProductAssembler savingsProductAssembler,
             ProductToGLAccountMappingWritePlatformService accountMappingWritePlatformService,
-            FineractEntityAccessUtil fineractEntityAccessUtil) {
+            FineractEntityAccessUtil fineractEntityAccessUtil,
+            KycTierRepositoryWrapper kycTierRepositoryWrapper) {
         return new SavingsProductWritePlatformServiceJpaRepositoryImpl(context, savingProductRepository, fromApiJsonDataValidator,
-                savingsProductAssembler, accountMappingWritePlatformService, fineractEntityAccessUtil);
+                savingsProductAssembler, accountMappingWritePlatformService, fineractEntityAccessUtil, kycTierRepositoryWrapper);
     }
 
     @Bean

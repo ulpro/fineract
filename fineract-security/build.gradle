@@ -24,7 +24,7 @@ apply plugin: 'eclipse'
 configurations {
     providedRuntime // needed for Spring Boot executable WAR
     providedCompile
-    compile() {
+    compileClasspath {
         exclude module: 'hibernate-entitymanager'
         exclude module: 'hibernate-validator'
         exclude module: 'activation'

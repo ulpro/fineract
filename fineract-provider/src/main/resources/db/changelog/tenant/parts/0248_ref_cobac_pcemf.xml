@@ -1,0 +1,635 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+
+    <!--
+        Migration 0248 — Table de liaison codes COBAC SESAME ↔ codes PCEMF/OHADA
+        =========================================================================
+        Séparation architecturale entre :
+          - acc_gl_account.gl_code  : codes PCEMF natifs (ex: 4011, 5111)
+          - ref_cobac_pcemf         : table de correspondance vers codes COBAC SESAME
+          - Vues SESAME FM1101-FM1117 : filtrent par cobac_code uniquement
+
+        Source PCEMF : Plan Comptable des EMF (COBAC, janvier 2010)
+        Source COBAC : Instructions COBAC I-EMF-2010/01 à I-EMF-2010/04 + SESAME 4.0
+    -->
+
+    <!-- ===================================================================
+         ÉTAPE 1 — Créer la table de liaison ref_cobac_pcemf
+         =================================================================== -->
+    <changeSet id="0248-create-ref_cobac_pcemf" author="mavou-dev">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="ref_cobac_pcemf"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="ref_cobac_pcemf"
+                     remarks="Table de liaison codes COBAC SESAME ↔ codes PCEMF/OHADA">
+            <column name="id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cobac_code" type="VARCHAR(10)"
+                    remarks="Code COBAC SESAME (ex: C2Q1, E7D0)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_cobac_code"/>
+            </column>
+            <column name="pcemf_code" type="VARCHAR(20)"
+                    remarks="Code PCEMF/OHADA dans acc_gl_account.gl_code (ex: 4011, 5111)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="libelle_cobac" type="VARCHAR(300)"
+                    remarks="Libellé COBAC SESAME (si différent du libellé PCEMF)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="classe_pcemf" type="TINYINT(1)"
+                    remarks="Numéro de classe PCEMF (1 à 9)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="etat_sesame" type="VARCHAR(20)"
+                    remarks="État SESAME concerné (FM1101, FM1107, etc.)">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_pcemf_code" tableName="ref_cobac_pcemf">
+            <column name="pcemf_code"/>
+        </createIndex>
+        <createIndex indexName="idx_classe_pcemf" tableName="ref_cobac_pcemf">
+            <column name="classe_pcemf"/>
+        </createIndex>
+        <createIndex indexName="idx_etat_sesame" tableName="ref_cobac_pcemf">
+            <column name="etat_sesame"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ===================================================================
+         ÉTAPE 2 — Peupler la table avec toutes les correspondances PCEMF ↔ COBAC
+         =================================================================== -->
+    <changeSet id="0248-populate-ref_cobac_pcemf" author="mavou-dev">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="ref_cobac_pcemf"/>
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM ref_cobac_pcemf</sqlCheck>
+        </preConditions>
+
+        <sql><![CDATA[
+-- =============================================================================
+-- TABLE DE CORRESPONDANCE COMPLÈTE : CODES COBAC SESAME ↔ PCEMF/OHADA
+-- =============================================================================
+-- Source PCEMF : Plan Comptable des EMF (COBAC, janvier 2010)
+-- Source COBAC : Instructions COBAC I-EMF-2010/01 à /04 + SESAME 4.0 / SPECTRA
+--
+-- Colonnes :
+--   cobac_code   = code alphanumérique SESAME (ex: E7D0, C2Q1, H0A0)
+--   pcemf_code   = numéro de compte PCEMF (ex: 5111, 4011)
+--   libelle_cobac= libellé COBAC (null si identique au PCEMF)
+--   classe_pcemf = classe PCEMF (1 à 9)
+--   etat_sesame  = état réglementaire principal concerné
+-- =============================================================================
+
+INSERT INTO ref_cobac_pcemf
+    (cobac_code, pcemf_code, libelle_cobac, classe_pcemf, etat_sesame)
+VALUES
+
+-- ===========================================================================
+-- CLASSE 1 — CAPITAL, RÉSERVES ET ASSIMILÉS (Ressources propres nettes)
+-- FM1107 — Bilan Passif
+-- ===========================================================================
+-- 10 — Capital
+('A0A0', '101',  'Capital souscrit non appelé',                                    1, 'FM1107'),
+('A0B0', '1011', 'Capital',                                                        1, 'FM1107'),
+('A0C0', '1012', 'Capital non versé',                                              1, 'FM1107'),
+('A0D0', '1013', 'Actionnaires restant dus',                                       1, 'FM1107'),
+('A0E0', '1019', 'Capital souscrit non appelé réseau',                             1, 'FM1107'),
+-- 11 — Réserves
+('A1A0', '111',  'Réserve légale',                                                 1, 'FM1107'),
+('A1B0', '112',  'Réserve statutaire',                                             1, 'FM1107'),
+('A1C0', '113',  'Réserves affectées à des couvertures',                           1, 'FM1107'),
+('A1D0', '114',  'Réserves facultatives et ordinaires',                            1, 'FM1107'),
+('A1E0', '116',  'Réserve mutualiste',                                             1, 'FM1107'),
+('A1F0', '117',  'Réserves spéciales',                                             1, 'FM1107'),
+('A1G0', '118',  'Autres réserves',                                                1, 'FM1107'),
+-- 12 — Primes liées au capital
+('A2A0', '121',  'Primes d''émission',                                             1, 'FM1107'),
+('A2B0', '122',  'Primes de fusion',                                               1, 'FM1107'),
+('A2C0', '123',  'Primes d''apport',                                               1, 'FM1107'),
+('A2D0', '124',  'Primes de conversion d''obligations en actions',                 1, 'FM1107'),
+-- 13 — Résultats reportés / en instance d'affectation
+('A3A0', '131',  'Bénéfice de l''exercice',                                        1, 'FM1107'),
+('A3B0', '132',  'Perte de l''exercice',                                           1, 'FM1107'),
+('A3C0', '133',  'Report à nouveau bénéficiaire',                                  1, 'FM1107'),
+('A3D0', '134',  'Report à nouveau déficitaire',                                   1, 'FM1107'),
+-- 14 — Subventions d'investissement et provisions réglementées
+('A4A0', '141',  'Subventions d''investissement reçues',                           1, 'FM1107'),
+('A4B0', '142',  'Amortissements dérogatoires',                                    1, 'FM1107'),
+('A4C0', '143',  'Provisions réglementées relatives aux stocks',                   1, 'FM1107'),
+('A4D0', '144',  'Provisions réglementées relatives aux autres éléments',         1, 'FM1107'),
+('A4E0', '145',  'Provisions spéciales de réévaluation',                           1, 'FM1107'),
+('A4F0', '146',  'Plus-values de cession à réinvestir',                            1, 'FM1107'),
+
+-- ===========================================================================
+-- CLASSE 1 — EMPRUNTS, RESSOURCES ASSIMILÉES ET DETTES SUBORDONNÉES
+-- ===========================================================================
+-- 15 — Fonds de dotation et assimilés
+('A5A0', '151',  'Fonds de dotation',                                              1, 'FM1107'),
+('A5B0', '153',  'Fonds d''aide et de garantie',                                   1, 'FM1107'),
+('A5C0', '154',  'Autres fonds',                                                   1, 'FM1107'),
+-- 16 — Ressources spéciales et assimilées
+('A6A0', '161',  'Emprunts obligataires',                                          1, 'FM1107'),
+('A6B0', '162',  'Emprunts auprès d''institutions financières',                    1, 'FM1107'),
+('A6C0', '163',  'Emprunts auprès d''institutions de microfinance',                1, 'FM1107'),
+('A6D0', '164',  'Emprunts auprès d''autres créanciers',                           1, 'FM1107'),
+('A6E0', '165',  'Dettes rattachées aux emprunts',                                 1, 'FM1107'),
+-- 17 — Dettes rattachées aux ressources permanentes
+('A7A0', '171',  'Charges à payer sur emprunts à LT',                             1, 'FM1107'),
+('A7B0', '172',  'Charges à payer sur dettes subordonnées',                        1, 'FM1107'),
+-- 18 — Autres ressources permanentes
+('A8A0', '181',  'Emprunts participatifs',                                         1, 'FM1107'),
+('A8B0', '182',  'Dettes subordonnées',                                            1, 'FM1107'),
+('A8C0', '1821', 'Comptes bloqués actionnaires',                                   1, 'FM1107'),
+('A8D0', '1822', 'Comptes bloqués associés (1ère catégorie)',                      1, 'FM1107'),
+('A8E0', '1823', 'Comptes bloqués EMF affiliés',                                   1, 'FM1107'),
+('A8F0', '1831', 'Ligne de financement reçue de l''Etat assortie d''une clause',  1, 'FM1107'),
+('A8G0', '1832', 'Ligne de financement reçue d''organismes assortie d''une clause',1, 'FM1107'),
+('A8H0', '1833', 'Autres comptes bloqués',                                         1, 'FM1107'),
+('A8I0', '184',  'Titres de créances négociables',                                 1, 'FM1107'),
+('A8J0', '1851', 'Emprunt LT',                                                     1, 'FM1107'),
+('A8K0', '1852', 'Emprunt MT',                                                     1, 'FM1107'),
+('A8L0', '186',  'Dettes de crédit-bail et contrats assimilés',                    1, 'FM1107'),
+('A8M0', '1860', 'Emprunts équivalents de crédit-bail mobilier',                   1, 'FM1107'),
+('A8N0', '1861', 'Emprunts équivalents de crédit-bail immobilier',                 1, 'FM1107'),
+('A8O0', '1862', 'Emprunts équivalents - autres contrats',                         1, 'FM1107'),
+('A8P0', '187',  'Dépôts et cautionnements non commerciaux reçus',                1, 'FM1107'),
+('A8Q0', '1870', 'Dépôts de garantie reçus',                                      1, 'FM1107'),
+('A8R0', '1871', 'Cautionnements reçus',                                           1, 'FM1107'),
+('A8S0', '188',  'Dettes rattachées aux emprunts à LT et MT',                     1, 'FM1107'),
+-- 19 — Provisions pour risques et charges
+('A9A0', '190',  'Provisions pour risques généraux',                               1, 'FM1107'),
+('A9B0', '1901', 'Provisions pour risques bancaires généraux',                     1, 'FM1107'),
+('A9C0', '1902', 'Autres provisions pour risques généraux',                        1, 'FM1107'),
+('A9D0', '191',  'Provisions pour charges',                                        1, 'FM1107'),
+('A9E0', '1911', 'Provisions pour litiges en cours',                               1, 'FM1107'),
+
+-- ===========================================================================
+-- CLASSE 2 — IMMOBILISATIONS (Actif immobilisé)
+-- FM1107 — Bilan Actif
+-- ===========================================================================
+-- 20 — Frais et valeurs immobilisées
+('B0A0', '201',  'Frais d''établissement',                                         2, 'FM1107'),
+('B0B0', '202',  'Frais de recherche et de développement',                         2, 'FM1107'),
+('B0C0', '203',  'Logiciels informatiques',                                        2, 'FM1107'),
+('B0D0', '204',  'Brevets, licences, marques, droits et valeurs similaires',       2, 'FM1107'),
+('B0E0', '205',  'Fonds commercial et droit au bail',                              2, 'FM1107'),
+('B0F0', '206',  'Autres immobilisations incorporelles',                            2, 'FM1107'),
+('B0G0', '209',  'Immobilisations incorporelles en cours',                          2, 'FM1107'),
+-- 21 — Amortissements des frais et valeurs immobilisées
+('B1A0', '211',  'Amortissements frais d''établissement',                          2, 'FM1107'),
+('B1B0', '212',  'Amortissements frais de recherche et développement',             2, 'FM1107'),
+('B1C0', '213',  'Amortissements logiciels informatiques',                         2, 'FM1107'),
+('B1D0', '214',  'Amortissements brevets, licences et droits',                     2, 'FM1107'),
+('B1E0', '215',  'Amortissements fonds commercial et droit au bail',               2, 'FM1107'),
+('B1F0', '216',  'Amortissements autres immobilisations incorporelles',             2, 'FM1107'),
+-- 22 — Crédit-bail et opérations assimilées (Bailleur)
+('B2A0', '221',  'Immeubles affectés au crédit-bail et location avec option d''achat', 2, 'FM1107'),
+('B2B0', '222',  'Immeubles destinés au crédit-bail',                              2, 'FM1107'),
+('B2C0', '223',  'Matériel affecté au crédit-bail',                                2, 'FM1107'),
+('B2D0', '224',  'Matériel destiné au crédit-bail',                                2, 'FM1107'),
+('B2E0', '225',  'Autres biens affectés au crédit-bail',                           2, 'FM1107'),
+('B2F0', '231',  'Amortissements immeubles affectés au crédit-bail',               2, 'FM1107'),
+('B2G0', '232',  'Amortissements immeubles destinés au crédit-bail',               2, 'FM1107'),
+('B2H0', '233',  'Amortissements matériel affecté au crédit-bail',                 2, 'FM1107'),
+-- 23 — Crédit-bail (Preneur)
+('B3A0', '237',  'Matériel et mobilier affecté au crédit-bail (preneur)',          2, 'FM1107'),
+('B3B0', '243',  'Avances et acomptes sur immob. destinés au crédit-bail',         2, 'FM1107'),
+('B3C0', '247',  'Avances et acomptes sur matériel et mobilier crédit-bail',       2, 'FM1107'),
+-- 24 — Autres immobilisations
+('B4A0', '251',  'Terrains',                                                       2, 'FM1107'),
+('B4B0', '261',  'Immeubles d''exploitation',                                      2, 'FM1107'),
+('B4C0', '262',  'Immeubles en cours',                                             2, 'FM1107'),
+('B4D0', '263',  'Mobilier d''exploitation',                                       2, 'FM1107'),
+('B4E0', '264',  'Matériel informatique',                                          2, 'FM1107'),
+('B4F0', '265',  'Matériel de transport',                                          2, 'FM1107'),
+('B4G0', '266',  'Autres matériels',                                               2, 'FM1107'),
+('B4H0', '271',  'Amortissements immeubles d''exploitation',                       2, 'FM1107'),
+('B4I0', '272',  'Amortissements mobilier d''exploitation',                        2, 'FM1107'),
+('B4J0', '273',  'Amortissements matériel informatique',                           2, 'FM1107'),
+('B4K0', '274',  'Amortissements matériel de transport',                           2, 'FM1107'),
+('B4L0', '275',  'Amortissements autres matériels',                                2, 'FM1107'),
+-- 29 — Immobilisations financières
+('B5A0', '291',  'Terrains immobilisations financières',                           2, 'FM1107'),
+('B5B0', '2921', 'Immeubles d''exploitation',                                      2, 'FM1107'),
+('B5C0', '2922', 'Immeubles en location simple',                                   2, 'FM1107'),
+('B5D0', '2925', 'Matériel et mobilier d''exploitation',                           2, 'FM1107'),
+('B5E0', '2929', 'Autres immobilisations corporelles',                             2, 'FM1107'),
+('B5F0', '2951', 'Dépôts de garantie',                                             2, 'FM1107'),
+('B5G0', '2952', 'Cautionnements',                                                 2, 'FM1107'),
+('B5H0', '2962', 'Actions et parts d''établissements de crédit',                   2, 'FM1107'),
+('B5I0', '2963', 'Autres titres de participation',                                 2, 'FM1107'),
+('B5J0', '2964', 'Titres de l''activité de portefeuille',                          2, 'FM1107'),
+('B5K0', '2965', 'Titres d''investissement',                                       2, 'FM1107'),
+('B5L0', '2971', 'Titres publics et assimilés',                                    2, 'FM1107'),
+('B5M0', '2972', 'Autres prêts et titres publics',                                 2, 'FM1107'),
+('B5N0', '2973', 'Prêts et titres impayés',                                        2, 'FM1107'),
+
+-- ===========================================================================
+-- CLASSE 3 — OPÉRATIONS AVEC LA CLIENTÈLE (Créances et dettes)
+-- FM1107 Bilan Actif + FM1108 Bilan Passif + FM1109 Hors-bilan
+-- ===========================================================================
+-- 30 — Opérations avec la clientèle — Créances
+('C0A0', '301',  'Crédits à court terme (≤ 1 an)',                                3, 'FM1107'),
+('C0B0', '302',  'Crédits à moyen terme (1 à 5 ans)',                              3, 'FM1107'),
+('C0C0', '303',  'Crédits à long terme (> 5 ans)',                                 3, 'FM1107'),
+('C0D0', '304',  'Crédits de campagne',                                            3, 'FM1107'),
+('C0E0', '305',  'Crédits sur stocks nantis',                                      3, 'FM1107'),
+('C0F0', '306',  'Autres crédits aux membres/clients',                             3, 'FM1107'),
+('C0G0', '307',  'Créances sur crédit-bail',                                       3, 'FM1107'),
+('C0H0', '309',  'Autres créances sur la clientèle',                               3, 'FM1107'),
+-- 31 — Créances douteuses sur la clientèle
+('C1A0', '311',  'Créances douteuses à court terme',                               3, 'FM1107'),
+('C1B0', '312',  'Créances douteuses à moyen terme',                               3, 'FM1107'),
+('C1C0', '313',  'Créances douteuses à long terme',                                3, 'FM1107'),
+-- 32 — Intérêts et produits à recevoir sur créances clientèle
+('C2A0', '321',  'Intérêts à recevoir sur crédits CT',                             3, 'FM1107'),
+('C2B0', '322',  'Intérêts à recevoir sur crédits MT',                             3, 'FM1107'),
+('C2C0', '323',  'Intérêts à recevoir sur crédits LT',                             3, 'FM1107'),
+-- 33 — Provisions sur créances clientèle
+('C3A0', '331',  'Provisions sur créances douteuses CT',                           3, 'FM1107'),
+('C3B0', '332',  'Provisions sur créances douteuses MT',                           3, 'FM1107'),
+('C3C0', '333',  'Provisions sur créances douteuses LT',                           3, 'FM1107'),
+('C3D0', '336',  'Créances impayées sur crédit-bail',                              3, 'FM1107'),
+('C3E0', '337',  'Créances douteuses sur crédit-bail',                             3, 'FM1107'),
+-- 34 — Dépôts reçus de la clientèle
+('C4A0', '401',  'Dépôts à vue des membres/clients',                               3, 'FM1108'),
+('C4B0', '4011', 'Comptes courants créditeurs',                                    3, 'FM1108'),
+('C4C0', '4012', 'Comptes d''épargne à vue',                                       3, 'FM1108'),
+('C4D0', '4013', 'Comptes de dépôts ordinaires',                                   3, 'FM1108'),
+('C4E0', '402',  'Dépôts à terme des membres/clients',                             3, 'FM1108'),
+('C4F0', '4021', 'Dépôts à terme',                                                 3, 'FM1108'),
+('C4G0', '4022', 'Bons de caisse',                                                 3, 'FM1108'),
+('C4H0', '403',  'Comptes de dépôts à régime spécial',                             3, 'FM1108'),
+('C4I0', '4031', 'Plans d''épargne',                                               3, 'FM1108'),
+('C4J0', '4032', 'Comptes sur livrets',                                            3, 'FM1108'),
+('C4K0', '404',  'Comptes d''épargne affectés',                                    3, 'FM1108'),
+('C4L0', '405',  'Autres dépôts',                                                  3, 'FM1108'),
+('C4M0', '406',  'Parts sociales',                                                  3, 'FM1108'),
+-- 35 — Intérêts et charges à payer sur dépôts
+('C5A0', '411',  'Charges à payer sur dépôts à vue',                               3, 'FM1108'),
+('C5B0', '412',  'Charges à payer sur dépôts à terme',                             3, 'FM1108'),
+('C5C0', '413',  'Charges à payer sur comptes à régime spécial',                   3, 'FM1108'),
+-- 36 — Comptes de correspondants (Clientèle)
+('C6A0', '421',  'Comptes débiteurs de la clientèle divers',                       3, 'FM1107'),
+('C6B0', '422',  'Comptes créditeurs de la clientèle divers',                      3, 'FM1108'),
+-- 37 — Autres sommes dues à la clientèle
+('C7A0', '431',  'Sommes dues aux membres/clients',                                3, 'FM1108'),
+('C7B0', '432',  'Mandats à payer',                                                3, 'FM1108'),
+('C7C0', '433',  'Autres sommes dues',                                             3, 'FM1108'),
+
+-- ===========================================================================
+-- CLASSE 3 (suite) — OPÉRATIONS DE TIERS ET RÉGULARISATION
+-- ===========================================================================
+-- 38 — Comptes de régularisation (Actif)
+('C8A0', '381',  'Comptes d''ajustement sur opérations en devises',                3, 'FM1107'),
+('C8B0', '382',  'Charges constatées d''avance',                                   3, 'FM1107'),
+('C8C0', '383',  'Produits à recevoir',                                            3, 'FM1107'),
+('C8D0', '384',  'Intérêts courus non échus à recevoir',                           3, 'FM1107'),
+('C8E0', '385',  'Charges à répartir sur plusieurs exercices',                     3, 'FM1107'),
+-- 39 — Comptes de régularisation (Passif)
+('C9A0', '391',  'Comptes d''ajustement sur opérations en devises (passif)',        3, 'FM1108'),
+('C9B0', '392',  'Produits constatés d''avance',                                   3, 'FM1108'),
+('C9C0', '393',  'Charges à payer',                                                3, 'FM1108'),
+('C9D0', '394',  'Intérêts courus non échus à payer',                              3, 'FM1108'),
+
+-- ===========================================================================
+-- CLASSE 3 (suite) — PROVISIONS SUR CRÉANCES CLIENTÈLE
+-- ===========================================================================
+('D0A0', '391',  'Provisions sur créances douteuses couvertes sûretés réelles',    3, 'FM1107'),
+('D0B0', '392',  'Provisions sur autres créances douteuses',                       3, 'FM1107'),
+('D0C0', '393',  'Provisions sur créances douteuses sur crédit-bail',              3, 'FM1107'),
+('D0D0', '3921', 'Prov. créances douv. couv. sûretés depuis < 1 an',              3, 'FM1107'),
+('D0E0', '3922', 'Prov. créances douv. couv. sûretés depuis 1 à 2 ans',           3, 'FM1107'),
+('D0F0', '3923', 'Prov. créances douv. couv. sûretés depuis 2 à 3 ans',           3, 'FM1107'),
+('D0G0', '3924', 'Prov. créances douv. couv. sûretés depuis > 3 ans',             3, 'FM1107'),
+('D0H0', '3931', 'Prov. autres créances douteuses depuis < 1 an',                 3, 'FM1107'),
+('D0I0', '3932', 'Prov. autres créances douteuses depuis 1 à 2 ans',              3, 'FM1107'),
+('D0J0', '3933', 'Prov. autres créances douteuses depuis > 2 ans',                3, 'FM1107'),
+('D0K0', '3940', 'Prov. créances douteuses crédit-bail hors réseau',              3, 'FM1107'),
+('D0L0', '397',  'Provisions sur dépréciation de stocks',                          3, 'FM1107'),
+
+-- ===========================================================================
+-- CLASSE 4 — OPÉRATIONS AVEC LES CORRESPONDANTS
+-- FM1107 + FM1108
+-- ===========================================================================
+-- 40 — Correspondants — BEAC / Banques
+('D1A0', '4011', 'Compte courant BEAC',                                            4, 'FM1107'),
+('D1B0', '4012', 'Caisse de dépôt et virements BEAC',                             4, 'FM1107'),
+('D1C0', '4013', 'Compte ordinaire BEAC',                                          4, 'FM1107'),
+('D1D0', '4021', 'Comptes nostri établissements de crédit locaux',                 4, 'FM1107'),
+('D1E0', '4022', 'Comptes nostri établissements de crédit étrangers',              4, 'FM1107'),
+('D1F0', '4031', 'Comptes loro établissements de crédit locaux',                   4, 'FM1108'),
+('D1G0', '4032', 'Comptes loro établissements de crédit étrangers',                4, 'FM1108'),
+-- 41 — Opérations internes et réseau EMF
+('D2A0', '411',  'Comptes courants EMF réseau (débiteur)',                         4, 'FM1107'),
+('D2B0', '412',  'Comptes courants EMF réseau (créditeur)',                        4, 'FM1108'),
+('D2C0', '413',  'Opérations en cours avec EMF réseau',                            4, 'FM1107'),
+-- 42 — Prêts et emprunts interbancaires
+('D3A0', '421',  'Prêts interbancaires à CT',                                      4, 'FM1107'),
+('D3B0', '422',  'Prêts interbancaires à MT',                                      4, 'FM1107'),
+('D3C0', '431',  'Emprunts interbancaires à CT',                                   4, 'FM1108'),
+('D3D0', '432',  'Emprunts interbancaires à MT',                                   4, 'FM1108'),
+
+-- ===========================================================================
+-- CLASSE 5 — TRÉSORERIE ET OPÉRATIONS AVEC LES INSTITUTIONS
+-- FM1107 Bilan Actif (trésorerie active) / FM1108 Bilan Passif (trésorerie passive)
+-- ===========================================================================
+-- 51 — Caisse et banque
+('E7D0', '5111', 'Caisse FCFA',                                                    5, 'FM1107'),
+('E7E0', '5112', 'Caisse devises',                                                 5, 'FM1107'),
+('E7F0', '5113', 'Caisse en or',                                                   5, 'FM1107'),
+('E7G0', '5119', 'Autres fonds en caisse',                                         5, 'FM1107'),
+('E7H0', '5121', 'Banques - comptes ordinaires',                                   5, 'FM1107'),
+('E7I0', '5122', 'Banques - comptes sur livrets',                                  5, 'FM1107'),
+('E7J0', '5123', 'Banques - comptes à terme',                                      5, 'FM1107'),
+('E7K0', '5124', 'Banques - comptes à préavis',                                    5, 'FM1107'),
+('E7L0', '5125', 'Banques - autres comptes',                                       5, 'FM1107'),
+('E7M0', '5131', 'Services financiers postaux',                                    5, 'FM1107'),
+('E7N0', '514',  'Instruments de paiement en cours d''encaissement',               5, 'FM1107'),
+-- 51 — Titres de placement
+('E1A0', '5121', 'Titres de placement - Actions et parts',                         5, 'FM1107'),
+('E1B0', '5122', 'Titres de placement - Obligations et assimilés',                 5, 'FM1107'),
+('E1C0', '5123', 'Bons du Trésor',                                                 5, 'FM1107'),
+('E1D0', '5124', 'Autres titres de placement',                                     5, 'FM1107'),
+-- 52 — Engagements de trésorerie
+('E2A0', '521',  'Concours à décaissement immédiat',                               5, 'FM1107'),
+('E2B0', '522',  'Prises en pension',                                              5, 'FM1107'),
+('E2C0', '523',  'Prêts au jour le jour',                                          5, 'FM1107'),
+('E2D0', '531',  'Emprunts au jour le jour',                                       5, 'FM1108'),
+('E2E0', '532',  'Mises en pension',                                               5, 'FM1108'),
+('E2F0', '533',  'Emprunts à terme',                                               5, 'FM1108'),
+-- 53 — Correspondants (réseau)
+('E3A0', '541',  'Comptes de correspondants débiteurs réseau',                     5, 'FM1107'),
+('E3B0', '542',  'Comptes de correspondants créditeurs réseau',                    5, 'FM1108'),
+('E3C0', '543',  'Créances immobilisées sur correspondants',                       5, 'FM1107'),
+('E3D0', '544',  'Créances douteuses sur correspondants',                          5, 'FM1107'),
+-- 57 — Autres valeurs liquidables
+('E4A0', '571',  'Valeurs à l''encaissement',                                      5, 'FM1107'),
+('E4B0', '572',  'Valeurs données en garantie',                                    5, 'FM1107'),
+('E4C0', '573',  'Valeurs à payer',                                                5, 'FM1108'),
+-- 59 — Provisions pour dépréciation de trésorerie
+('E5A0', '591',  'Provisions pour dépréciation des titres de placement',           5, 'FM1107'),
+('E5B0', '5911', 'Prov. dépréciation actions et parts Ets de crédit',             5, 'FM1107'),
+('E5C0', '5912', 'Prov. dépréciation Bons du Trésor',                             5, 'FM1107'),
+('E5D0', '5913', 'Prov. dépréciation autres actions et parts négociables',        5, 'FM1107'),
+('E5E0', '5914', 'Prov. dépréciation obligations et bons assimilés',              5, 'FM1107'),
+('E5F0', '5916', 'Prov. dépréciation autres titres à CT',                         5, 'FM1107'),
+('E5G0', '5917', 'Prov. dépréciation titres douteux',                             5, 'FM1107'),
+('E5H0', '5921', 'Prov. dépréciation créances douteuses sur correspondants',      5, 'FM1107'),
+
+-- ===========================================================================
+-- CLASSE 6 — CHARGES (Compte de résultat)
+-- FM1110 — Compte de résultat
+-- ===========================================================================
+-- 60 — Charges sur opérations de trésorerie
+('F0A0', '601',  'Intérêts sur opérations de trésorerie',                         6, 'FM1110'),
+('F0B0', '6011', 'Intérêts sur emprunts interbancaires CT',                        6, 'FM1110'),
+('F0C0', '6012', 'Intérêts sur emprunts au jour le jour',                          6, 'FM1110'),
+('F0D0', '6013', 'Intérêts sur emprunts à terme',                                  6, 'FM1110'),
+('F0E0', '6014', 'Intérêts sur mises en pension',                                  6, 'FM1110'),
+('F0F0', '6015', 'Commissions sur opérations de trésorerie',                       6, 'FM1110'),
+('F0G0', '6019', 'Autres charges sur opérations de trésorerie',                    6, 'FM1110'),
+-- 61 — Charges sur opérations avec la clientèle
+('F1A0', '611',  'Intérêts sur dépôts à vue',                                      6, 'FM1110'),
+('F1B0', '612',  'Intérêts sur dépôts à terme',                                    6, 'FM1110'),
+('F1C0', '613',  'Intérêts sur comptes à régime spécial',                          6, 'FM1110'),
+('F1D0', '614',  'Commissions sur opérations clientèle',                           6, 'FM1110'),
+('F1E0', '615',  'Charges sur parts sociales',                                     6, 'FM1110'),
+('F1F0', '616',  'Charges sur dépôts affectés',                                    6, 'FM1110'),
+('F1G0', '619',  'Autres charges sur opérations avec la clientèle',                6, 'FM1110'),
+-- 62 — Charges sur opérations bancaires diverses
+('F2A0', '621',  'Charges sur titres de placement',                                6, 'FM1110'),
+('F2B0', '622',  'Charges sur portefeuille de transaction',                        6, 'FM1110'),
+('F2C0', '623',  'Charges sur engagements par signature',                          6, 'FM1110'),
+('F2D0', '624',  'Charges de crédit-bail',                                         6, 'FM1110'),
+('F2E0', '629',  'Autres charges bancaires diverses',                              6, 'FM1110'),
+-- 63 — Charges de personnel
+('F3A0', '631',  'Appointements et salaires',                                      6, 'FM1110'),
+('F3B0', '6311', 'Salaires de base',                                               6, 'FM1110'),
+('F3C0', '6312', 'Primes et gratifications',                                       6, 'FM1110'),
+('F3D0', '6313', 'Congés payés',                                                   6, 'FM1110'),
+('F3E0', '6314', 'Avantages en nature',                                            6, 'FM1110'),
+('F3F0', '632',  'Charges sociales',                                               6, 'FM1110'),
+('F3G0', '6321', 'Cotisations de sécurité sociale',                                6, 'FM1110'),
+('F3H0', '6322', 'Mutuelles et prévoyances',                                       6, 'FM1110'),
+('F3I0', '6323', 'Retraites',                                                      6, 'FM1110'),
+('F3J0', '633',  'Autres charges de personnel',                                    6, 'FM1110'),
+-- 64 — Autres charges liées aux activités accessoires
+('F4A0', '641',  'Charges de fonctionnement',                                      6, 'FM1110'),
+('F4B0', '6411', 'Loyers et charges locatives',                                    6, 'FM1110'),
+('F4C0', '6412', 'Charges d''eau, électricité, gaz',                               6, 'FM1110'),
+('F4D0', '6413', 'Entretien et réparations',                                       6, 'FM1110'),
+('F4E0', '6414', 'Primes d''assurance',                                            6, 'FM1110'),
+('F4F0', '6415', 'Transports',                                                     6, 'FM1110'),
+('F4G0', '6416', 'Missions et réceptions',                                         6, 'FM1110'),
+('F4H0', '6417', 'Publicité et communication',                                     6, 'FM1110'),
+('F4I0', '6418', 'Services bancaires et charges assimilées',                       6, 'FM1110'),
+('F4J0', '6419', 'Autres charges de fonctionnement',                               6, 'FM1110'),
+('F4K0', '642',  'Charges sur opérations accessoires',                             6, 'FM1110'),
+-- 65 — Impôts et taxes
+('F5A0', '651',  'Impôts et taxes sur rémunérations',                              6, 'FM1110'),
+('F5B0', '652',  'Autres impôts et taxes',                                         6, 'FM1110'),
+-- 66 — Dotations aux amortissements et provisions
+('F6A0', '661',  'Dotations aux amortissements des immobilisations',               6, 'FM1110'),
+('F6B0', '662',  'Dotations aux provisions pour dépréciation des créances',        6, 'FM1110'),
+('F6C0', '663',  'Dotations aux provisions pour risques et charges',               6, 'FM1110'),
+('F6D0', '664',  'Dotations aux provisions pour dépréciation des immobilisations', 6, 'FM1110'),
+('F6E0', '665',  'Dotations aux provisions réglementées',                          6, 'FM1110'),
+-- 67 — Charges exceptionnelles et sur exercices antérieurs
+('F7A0', '670',  'Charges exceptionnelles sur opérations de trésorerie',          6, 'FM1110'),
+('F7B0', '671',  'Charges diverses sur exercices antérieurs',                      6, 'FM1110'),
+('F7C0', '672',  'Pertes sur créances irrécouvrables',                             6, 'FM1110'),
+('F7D0', '673',  'Moins-values de cession',                                        6, 'FM1110'),
+('F7E0', '674',  'Pénalités et amendes',                                           6, 'FM1110'),
+('F7F0', '678',  'Autres charges exceptionnelles',                                 6, 'FM1110'),
+-- 68 — Dotations aux amortissements des immobilisations (exceptionnelles)
+('F8A0', '681',  'Dot. amortissements frais et valeurs immobilisées',             6, 'FM1110'),
+('F8B0', '682',  'Dot. amortissements immobilisations corporelles',               6, 'FM1110'),
+-- 69 — Impôts sur les bénéfices
+('F9A0', '691',  'Impôts sur les sociétés',                                        6, 'FM1110'),
+('F9B0', '692',  'Acomptes et crédits d''impôt',                                   6, 'FM1110'),
+
+-- ===========================================================================
+-- CLASSE 7 — PRODUITS (Compte de résultat)
+-- FM1110 — Compte de résultat
+-- ===========================================================================
+-- 70 — Produits sur opérations de trésorerie
+('G0A0', '701',  'Intérêts sur opérations de trésorerie',                         7, 'FM1110'),
+('G0B0', '7011', 'Intérêts sur prêts interbancaires CT',                           7, 'FM1110'),
+('G0C0', '7012', 'Intérêts sur prêts au jour le jour',                             7, 'FM1110'),
+('G0D0', '7013', 'Intérêts sur prêts à terme',                                     7, 'FM1110'),
+('G0E0', '7014', 'Intérêts sur prises en pension',                                 7, 'FM1110'),
+('G0F0', '7015', 'Commissions sur opérations de trésorerie',                       7, 'FM1110'),
+('G0G0', '7019', 'Autres produits sur opérations de trésorerie',                   7, 'FM1110'),
+-- 71 — Produits sur opérations avec la clientèle
+('G1A0', '711',  'Intérêts sur crédits à court terme',                             7, 'FM1110'),
+('G1B0', '712',  'Intérêts sur crédits à moyen terme',                             7, 'FM1110'),
+('G1C0', '713',  'Intérêts sur crédits à long terme',                              7, 'FM1110'),
+('G1D0', '714',  'Commissions sur opérations avec la clientèle',                   7, 'FM1110'),
+('G1E0', '715',  'Produits sur crédits de campagne',                               7, 'FM1110'),
+('G1F0', '716',  'Produits sur crédit-bail',                                       7, 'FM1110'),
+('G1G0', '719',  'Autres produits sur opérations avec la clientèle',               7, 'FM1110'),
+-- 72 — Produits sur opérations bancaires diverses
+('G2A0', '721',  'Produits sur titres de placement',                               7, 'FM1110'),
+('G2B0', '722',  'Produits sur portefeuille de transaction',                       7, 'FM1110'),
+('G2C0', '723',  'Produits sur engagements par signature',                         7, 'FM1110'),
+('G2D0', '724',  'Produits sur opérations de change',                              7, 'FM1110'),
+('G2E0', '729',  'Autres produits bancaires divers',                               7, 'FM1110'),
+-- 74 — Produits accessoires
+('G4A0', '741',  'Produits accessoires divers',                                    7, 'FM1110'),
+('G4B0', '742',  'Loyers et produits assimilés',                                   7, 'FM1110'),
+('G4C0', '743',  'Subventions d''exploitation',                                    7, 'FM1110'),
+('G4D0', '744',  'Redevances pour concessions, brevets et licences',               7, 'FM1110'),
+('G4E0', '749',  'Autres produits accessoires',                                    7, 'FM1110'),
+-- 75 — Produits d'exploitation non bancaires
+('G5A0', '751',  'Produits sur cessions d''immobilisations',                       7, 'FM1110'),
+('G5B0', '752',  'Quotes-parts de subventions d''investissement',                  7, 'FM1110'),
+('G5C0', '753',  'Produits de participation',                                      7, 'FM1110'),
+-- 76 — Subventions et transferts
+('G6A0', '760',  'Subventions d''exploitation reçues',                             7, 'FM1110'),
+('G6B0', '761',  'Subventions de fonctionnement',                                  7, 'FM1110'),
+('G6C0', '762',  'Subventions d''équilibre',                                       7, 'FM1110'),
+('G6D0', '7631', 'Subventions d''exploitation et d''équilibre EMF hors réseau',   7, 'FM1110'),
+('G6E0', '7632', 'Subventions d''exploitation et d''équilibre EMF réseau',        7, 'FM1110'),
+-- 77 — Profits exceptionnels et sur exercices antérieurs
+('G7A0', '770',  'Produits d''exploitation bancaire sur exercices antérieurs',     7, 'FM1110'),
+('G7B0', '7701', 'Produits sur opérations de trésorerie antérieures',             7, 'FM1110'),
+('G7C0', '7702', 'Produits sur opérations clientèle et crédit-bail antérieures',  7, 'FM1110'),
+('G7D0', '7703', 'Produits sur opérations bancaires diverses antérieures',        7, 'FM1110'),
+('G7E0', '771',  'Produits divers sur exercices antérieurs',                       7, 'FM1110'),
+('G7F0', '7711', 'Produits du portefeuille titres antérieurs',                     7, 'FM1110'),
+('G7G0', '7712', 'Produits accessoires antérieurs',                                7, 'FM1110'),
+('G7H0', '772',  'Indemnités d''assurance',                                        7, 'FM1110'),
+('G7I0', '773',  'Provisions spéciales et réserves de réévaluation reprises',      7, 'FM1110'),
+('G7J0', '774',  'Subventions d''investissement reprises',                         7, 'FM1110'),
+('G7K0', '775',  'Prix de cession des éléments d''actif immobilisés',             7, 'FM1110'),
+('G7L0', '778',  'Divers profits exceptionnels',                                   7, 'FM1110'),
+('G7M0', '7781', 'Profits sur opérations de trésorerie exceptionnels',            7, 'FM1110'),
+('G7N0', '7782', 'Profits sur opérations avec la clientèle exceptionnels',        7, 'FM1110'),
+('G7O0', '7786', 'Excédents de caisse',                                            7, 'FM1110'),
+('G7P0', '7787', 'Escompte de règlement',                                          7, 'FM1110'),
+('G7Q0', '7788', 'Dons et libéralités effectivement obtenus',                     7, 'FM1110'),
+-- 78 — Reprises d'amortissements
+('G8A0', '780',  'Reprises d''amortissements des frais et valeurs immobilisées',  7, 'FM1110'),
+('G8B0', '782',  'Reprises d''amortissements des immobilisations corporelles',    7, 'FM1110'),
+-- 79 — Reprises de provisions et récupérations sur créances irrécouvrables
+('G9A0', '791',  'Reprises de provisions',                                         7, 'FM1110'),
+('G9B0', '7911', 'Reprises prov. pour risques et charges',                         7, 'FM1110'),
+('G9C0', '7912', 'Reprises prov. dépréciation valeurs immobilisées',              7, 'FM1110'),
+('G9D0', '7913', 'Reprises prov. dépréciation comptes clientèle',                 7, 'FM1110'),
+('G9E0', '7914', 'Reprises prov. dépréciation comptes tiers et régularisation',   7, 'FM1110'),
+('G9F0', '7915', 'Reprises prov. dépréciation comptes trésorerie',                7, 'FM1110'),
+('G9G0', '7917', 'Reprises prov. dépréciation des stocks',                         7, 'FM1110'),
+('G9H0', '792',  'Récupération sur créances abandonnées',                          7, 'FM1110'),
+
+-- ===========================================================================
+-- CLASSE 8 — RÉSULTATS — AFFECTATION (Soldes intermédiaires)
+-- FM1110 + FM1111
+-- ===========================================================================
+('H0A0', '801',  'Produit Net Bancaire',                                           8, 'FM1111'),
+('H0B0', '802',  'Résultat brut d''exploitation',                                  8, 'FM1111'),
+('H0C0', '803',  'Résultat d''exploitation',                                       8, 'FM1111'),
+('H0D0', '804',  'Résultat courant avant impôts',                                  8, 'FM1111'),
+('H0E0', '805',  'Résultat exceptionnel',                                          8, 'FM1111'),
+('H0F0', '806',  'Résultat avant impôts',                                          8, 'FM1111'),
+('H0G0', '807',  'Résultat net de l''exercice',                                    8, 'FM1111'),
+('H0H0', '811',  'Affectation aux réserves légales',                               8, 'FM1111'),
+('H0I0', '812',  'Affectation aux réserves statutaires',                           8, 'FM1111'),
+('H0J0', '813',  'Affectation à la réserve mutualiste',                            8, 'FM1111'),
+('H0K0', '814',  'Dividendes et ristournes',                                       8, 'FM1111'),
+('H0L0', '815',  'Report à nouveau',                                               8, 'FM1111'),
+('H0M0', '816',  'Autres affectations',                                            8, 'FM1111'),
+
+-- ===========================================================================
+-- CLASSE 9 — HORS-BILAN ET COMPTES D'ORDRE
+-- FM1109 — État hors-bilan + FM1112
+-- ===========================================================================
+-- 90 — Engagements de financement donnés
+('I0A0', '901',  'Engagements de financement en faveur d''établissements de crédit', 9, 'FM1109'),
+('I0B0', '902',  'Engagements de financement en faveur de la clientèle',           9, 'FM1109'),
+('I0C0', '9021', 'Ouvertures de crédits confirmés',                                9, 'FM1109'),
+('I0D0', '9022', 'Lignes de crédit confirmées',                                    9, 'FM1109'),
+-- 91 — Engagements de garantie donnés
+('I1A0', '911',  'Garanties d''ordre d''établissements de crédit',                 9, 'FM1109'),
+('I1B0', '912',  'Garanties d''ordre de la clientèle',                             9, 'FM1109'),
+('I1C0', '9121', 'Cautions et avals',                                              9, 'FM1109'),
+('I1D0', '9122', 'Garanties de remboursement',                                     9, 'FM1109'),
+('I1E0', '913',  'Autres engagements par signature donnés',                        9, 'FM1109'),
+-- 92 — Engagements reçus
+('I2A0', '921',  'Engagements de financement reçus d''établissements de crédit',  9, 'FM1109'),
+('I2B0', '922',  'Engagements de garantie reçus d''établissements de crédit',     9, 'FM1109'),
+('I2C0', '923',  'Garanties reçues de la clientèle',                               9, 'FM1109'),
+('I2D0', '9231', 'Hypothèques',                                                    9, 'FM1109'),
+('I2E0', '9232', 'Nantissements',                                                  9, 'FM1109'),
+('I2F0', '9233', 'Cautionnements reçus de la clientèle',                           9, 'FM1109'),
+-- 94 — Engagements de crédit-bail
+('I4A0', '941',  'Engagements de crédit-bail donnés',                              9, 'FM1109'),
+('I4B0', '942',  'Engagements de crédit-bail reçus',                               9, 'FM1109'),
+-- 97 — Comptes à vue et à terme (hors-bilan administratif)
+('I7A0', '971',  'Valeurs reçues en dépôt non comptabilisées',                    9, 'FM1109'),
+('I7B0', '972',  'Valeurs données en dépôt non comptabilisées',                   9, 'FM1109'),
+('I7C0', '973',  'Effets remis à l''encaissement',                                9, 'FM1109'),
+('I7D0', '974',  'Valeurs remises à l''escompte',                                  9, 'FM1109'),
+
+-- ===========================================================================
+-- CORRESPONDANCES SPÉCIFIQUES — Ratios prudentiels COBAC (FM1112-FM1117)
+-- ===========================================================================
+-- Couverture des risques
+('C2Q1', '4011', 'Dépôts à vue membres/clients — Couverture risques',             4, 'FM1112'),
+('C2Q2', '4012', 'Comptes d''épargne à vue — Couverture risques',                 4, 'FM1112'),
+('C2Q3', '402',  'Dépôts à terme — Couverture risques',                           4, 'FM1112'),
+-- Liquidité
+('L1A0', '301',  'Crédits CT — Ratio de liquidité',                               3, 'FM1113'),
+('L1B0', '302',  'Crédits MT — Ratio de liquidité',                               3, 'FM1113'),
+('L1C0', '5111', 'Caisse — Ratio de liquidité',                                   5, 'FM1113'),
+('L1D0', '5121', 'Banques — Ratio de liquidité',                                  5, 'FM1113'),
+-- Transformation
+('T1A0', '303',  'Crédits LT — Ratio de transformation',                          3, 'FM1114'),
+('T1B0', '185',  'Emprunts LT et MT — Ratio de transformation',                   1, 'FM1114'),
+-- Limitation des risques
+('R1A0', '301',  'Portefeuille global crédits — Limitation',                      3, 'FM1115'),
+('R1B0', '311',  'Grandes expositions — Créances douteuses',                      3, 'FM1115'),
+-- Solvabilité / Ratio Cooke
+('S1A0', '101',  'Fonds propres de base',                                          1, 'FM1116'),
+('S1B0', '111',  'Réserves — Fonds propres de base',                              1, 'FM1116'),
+('S1C0', '131',  'Bénéfice non distribué',                                         1, 'FM1116'),
+('S2A0', '141',  'Subventions — Fonds propres complémentaires',                   1, 'FM1116'),
+('S2B0', '181',  'Dettes subordonnées — Fonds propres complémentaires',           1, 'FM1116'),
+('S3A0', '301',  'Total crédits pondérés — Ratio solvabilité',                    3, 'FM1116'),
+-- Couverture des emplois LT par ressources stables
+('V1A0', '185',  'Ressources à MT et LT — Couverture emplois LT',                 1, 'FM1117'),
+('V1B0', '181',  'Ressources permanentes — Couverture emplois LT',                1, 'FM1117'),
+('V2A0', '302',  'Crédits MT — Emplois LT à couvrir',                             3, 'FM1117'),
+('V2B0', '303',  'Crédits LT — Emplois LT à couvrir',                             3, 'FM1117'),
+('V2C0', '291',  'Immobilisations nettes — Emplois LT à couvrir',                 2, 'FM1117');
+
+]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

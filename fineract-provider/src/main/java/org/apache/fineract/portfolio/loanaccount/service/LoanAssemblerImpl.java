@@ -103,6 +103,11 @@ import org.apache.fineract.portfolio.rate.domain.Rate;
 import org.apache.fineract.portfolio.rate.service.RateAssembler;
 import org.apache.fineract.useradministration.domain.AppUser;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+import org.apache.fineract.infrastructure.core.data.ApiParameterError;
+import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
+import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
+
 @RequiredArgsConstructor
 public class LoanAssemblerImpl implements LoanAssembler {
 
@@ -137,6 +142,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
     private final LoanChargeService loanChargeService;
     private final LoanOfficerService loanOfficerService;
     private final LoanScheduleComponent loanSchedule;
+    private final KycTierRepositoryWrapper kycTierRepositoryWrapper;
 
     @Override
     public Loan assembleFrom(final Long accountId) {
@@ -237,6 +243,8 @@ public class LoanAssemblerImpl implements LoanAssembler {
         if (groupId != null) {
             group = this.groupRepository.findOneWithNotFoundDetection(groupId);
         }
+
+        validateClientKycTierForProduct(client, loanProduct);
 
         final String externalIdStr = this.fromApiJsonHelper.extractStringNamed("externalId", element);
         ExternalId externalId = externalIdFactory.create(externalIdStr);
@@ -455,6 +463,8 @@ public class LoanAssemblerImpl implements LoanAssembler {
         } else {
             loanProduct = this.loanProductRepository.findById(productId).orElseThrow(() -> new LoanProductNotFoundException(productId));
         }
+
+        validateClientKycTierForProduct(loan.getClient(), loanProduct);
 
         final Set<LoanCharge> existingCharges = loan.getActiveCharges();
         Map<Long, LoanChargeData> chargesMap = new HashMap<>();
@@ -922,5 +932,28 @@ public class LoanAssemblerImpl implements LoanAssembler {
         actualChanges.put(Loan.REJECTED_ON_DATE, rejectedOn.format(fmt));
         actualChanges.put(Loan.CLOSED_ON_DATE, rejectedOn.format(fmt));
         return actualChanges;
+    }
+
+    @Override
+    public void validateClientKycTierForProduct(final Client client, final LoanProduct loanProduct) {
+        if (loanProduct != null && loanProduct.getKycTier() != null) {
+            if (client == null || client.getKycTierId() == null) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("loan");
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.required.for.product",
+                        "Client does not have a KYC tier required for this product: " + loanProduct.getKycTier().getName());
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+            final org.apache.fineract.kyc.domain.KycTier clientKycTier = this.kycTierRepositoryWrapper
+                    .findOneWithNotFoundDetection(client.getKycTierId());
+            if (clientKycTier.getLevel() < loanProduct.getKycTier().getLevel()) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("loan");
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.insufficient.for.product",
+                        "Client KYC tier level (" + clientKycTier.getLevel() + ") is lower than product required KYC tier level ("
+                                + loanProduct.getKycTier().getLevel() + ")");
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+        }
     }
 }

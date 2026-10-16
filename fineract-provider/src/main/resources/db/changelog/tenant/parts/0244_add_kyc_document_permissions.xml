@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!--
+        Use INSERT IGNORE to safely handle the case where permissions already exist.
+        This avoids Duplicate entry errors that were blocking Fineract startup.
+        runOnChange=true ensures re-execution if the changeset content was modified.
+    -->
+    <changeSet author="fineract" id="0242_add_kyc_document_permissions" runOnChange="true">
+        <sql>
+            INSERT IGNORE INTO m_permission (`grouping`, code, entity_name, action_name, can_maker_checker)
+            VALUES ('portfolio', 'APPROVE_KYCDOCUMENT', 'KYCDOCUMENT', 'APPROVE', 0);
+
+            INSERT IGNORE INTO m_permission (`grouping`, code, entity_name, action_name, can_maker_checker)
+            VALUES ('portfolio', 'REJECT_KYCDOCUMENT', 'KYCDOCUMENT', 'REJECT', 0);
+
+            INSERT IGNORE INTO m_permission (`grouping`, code, entity_name, action_name, can_maker_checker)
+            VALUES ('portfolio', 'SUBMIT_KYCDOCUMENT', 'KYCDOCUMENT', 'SUBMIT', 0);
+        </sql>
+    </changeSet>
+
+    <changeSet author="fineract" id="0243_assign_kyc_document_permissions" runOnChange="true">
+        <sql>
+            INSERT IGNORE INTO m_role_permission (role_id, permission_id)
+            SELECT 1, p.id FROM m_permission p WHERE p.code = 'APPROVE_KYCDOCUMENT'
+            AND NOT EXISTS (SELECT 1 FROM m_role_permission rp WHERE rp.role_id = 1 AND rp.permission_id = p.id);
+
+            INSERT IGNORE INTO m_role_permission (role_id, permission_id)
+            SELECT 1, p.id FROM m_permission p WHERE p.code = 'REJECT_KYCDOCUMENT'
+            AND NOT EXISTS (SELECT 1 FROM m_role_permission rp WHERE rp.role_id = 1 AND rp.permission_id = p.id);
+
+            INSERT IGNORE INTO m_role_permission (role_id, permission_id)
+            SELECT 1, p.id FROM m_permission p WHERE p.code = 'SUBMIT_KYCDOCUMENT'
+            AND NOT EXISTS (SELECT 1 FROM m_role_permission rp WHERE rp.role_id = 1 AND rp.permission_id = p.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

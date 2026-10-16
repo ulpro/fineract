@@ -19,12 +19,14 @@
 package org.apache.fineract.infrastructure.core.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import java.io.Serial;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Auditable;
 import org.springframework.data.jpa.domain.AbstractAuditable;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Make sure to modify the same class in the modules (fineract-investor, etc)
@@ -35,6 +37,7 @@ import org.springframework.data.jpa.domain.AbstractAuditable;
  * Abstract base class for auditable entities. Stores the audit values in persistent fields.
  */
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 public abstract class AbstractAuditableCustom extends AbstractPersistableCustom<Long> implements Auditable<Long, Long, LocalDateTime> {
 
     @Serial

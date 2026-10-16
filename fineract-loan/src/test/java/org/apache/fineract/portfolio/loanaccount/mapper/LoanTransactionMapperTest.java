@@ -97,7 +97,7 @@ public class LoanTransactionMapperTest {
 
         // Setup payment detail mocks
         when(paymentDetail.toData()).thenReturn(new PaymentDetailData(1L, PaymentTypeData.builder().id(1L).name("Cash").build(),
-                "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber"));
+                "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber", null, null, null, null, null, null));
 
         // When
         LoanTransactionData result = mapper.mapLoanTransaction(loanTransaction);

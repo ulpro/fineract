@@ -53,6 +53,8 @@ public class GLAccountData implements Serializable {
     private String nameDecorated;
     private CodeValueData tagId;
     private Long organizationRunningBalance;
+    private String cobacCode;
+    private String cobacDescription;
 
     // templates
     private List<EnumOptionData> accountTypeOptions;

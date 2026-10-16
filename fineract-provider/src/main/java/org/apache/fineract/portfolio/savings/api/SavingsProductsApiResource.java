@@ -74,6 +74,8 @@ import org.apache.fineract.portfolio.savings.data.SavingsProductData;
 import org.apache.fineract.portfolio.savings.service.SavingsDropdownReadPlatformService;
 import org.apache.fineract.portfolio.savings.service.SavingsEnumerations;
 import org.apache.fineract.portfolio.savings.service.SavingsProductReadPlatformService;
+import org.apache.fineract.kyc.data.KycTierData;
+import org.apache.fineract.kyc.service.KycTierReadPlatformService;
 import org.apache.fineract.portfolio.tax.data.TaxGroupData;
 import org.apache.fineract.portfolio.tax.service.TaxReadPlatformService;
 import org.springframework.stereotype.Component;
@@ -99,6 +101,7 @@ public class SavingsProductsApiResource {
     private final PaymentTypeReadService paymentTypeReadPlatformService;
     private final TaxReadPlatformService taxReadPlatformService;
     private final ConfigurationDomainService configurationDomainService;
+    private final KycTierReadPlatformService kycTierReadPlatformService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -279,6 +282,11 @@ public class SavingsProductsApiResource {
                     interestCalculationDaysInYearTypeOptions, lockinPeriodFrequencyTypeOptions, withdrawalFeeTypeOptions,
                     paymentTypeOptions, accountingRuleOptions, accountingMappingOptions, chargeOptions, penaltyOptions, taxGroupOptions,
                     accountMappingForPayment);
+        }
+
+        final List<KycTierData> kycTierOptions = this.kycTierReadPlatformService.retrieveAllActive();
+        if (savingsProductToReturn != null) {
+            savingsProductToReturn.withKycTierOptions(kycTierOptions);
         }
 
         return savingsProductToReturn;

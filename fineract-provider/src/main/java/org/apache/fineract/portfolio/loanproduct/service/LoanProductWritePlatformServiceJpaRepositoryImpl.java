@@ -67,6 +67,7 @@ import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanSupportedInterestRefundTypes;
 import org.apache.fineract.portfolio.loanproduct.exception.LoanProductCannotBeModifiedDueToNonClosedLoansException;
 import org.apache.fineract.portfolio.loanproduct.exception.LoanProductDateException;
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
 import org.apache.fineract.portfolio.loanproduct.exception.LoanProductNotFoundException;
 import org.apache.fineract.portfolio.loanproduct.serialization.LoanProductDataValidator;
 import org.apache.fineract.portfolio.rate.domain.Rate;
@@ -97,6 +98,7 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
     private final CreditAllocationsJsonParser creditAllocationsJsonParser;
     private final LoanProductAssembler loanProductAssembler;
     private final LoanProductUpdateUtil loanProductUpdateUtil;
+    private final KycTierRepositoryWrapper kycTierRepositoryWrapper;
     private final LoanProductPaymentAllocationRuleMerger loanProductPaymentAllocationRuleMerger = new LoanProductPaymentAllocationRuleMerger();
     private final LoanProductCreditAllocationRuleMerger loanProductCreditAllocationRuleMerger = new LoanProductCreditAllocationRuleMerger();
 
@@ -137,6 +139,13 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
             if (command.parameterExists("delinquencyBucketId")) {
                 loanProduct
                         .setDelinquencyBucket(findDelinquencyBucketIdIfProvided(command.longValueOfParameterNamed("delinquencyBucketId")));
+            }
+
+            if (command.parameterExists("kycTierId")) {
+                final Long kycTierId = command.longValueOfParameterNamed("kycTierId");
+                if (kycTierId != null) {
+                    loanProduct.setKycTier(this.kycTierRepositoryWrapper.findOneWithNotFoundDetection(kycTierId));
+                }
             }
 
             this.loanProductRepository.saveAndFlush(loanProduct);
@@ -218,6 +227,16 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
 
             if (changes.containsKey("delinquencyBucketId")) {
                 product.setDelinquencyBucket(findDelinquencyBucketIdIfProvided((Long) changes.get("delinquencyBucketId")));
+            }
+
+            if (command.parameterExists("kycTierId")) {
+                final Long kycTierId = command.longValueOfParameterNamed("kycTierId");
+                if (kycTierId != null) {
+                    product.setKycTier(this.kycTierRepositoryWrapper.findOneWithNotFoundDetection(kycTierId));
+                } else {
+                    product.setKycTier(null);
+                }
+                changes.put("kycTierId", kycTierId);
             }
 
             if (changes.containsKey("transactionProcessingStrategyCode")) {

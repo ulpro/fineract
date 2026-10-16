@@ -24,6 +24,7 @@ import static org.apache.fineract.infrastructure.core.domain.AuditableFieldsCons
 import static org.apache.fineract.infrastructure.core.domain.AuditableFieldsConstants.LAST_MODIFIED_DATE_DB_FIELD;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -35,6 +36,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.domain.Auditable;
 import org.springframework.data.jpa.domain.AbstractAuditable;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * A custom copy of {@link AbstractAuditable} to override the column names used on database. It also uses OffsetDateTime
@@ -46,6 +48,7 @@ import org.springframework.data.jpa.domain.AbstractAuditable;
 @MappedSuperclass
 @Getter
 @Setter
+@EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class AbstractAuditableWithUTCDateTimeCustom<T extends Serializable> extends AbstractPersistableCustom<T>
         implements Auditable<Long, T, OffsetDateTime> {

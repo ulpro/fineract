@@ -88,6 +88,18 @@
         <class>org.apache.fineract.useradministration.domain.Permission</class>
         <class>org.apache.fineract.useradministration.domain.Role</class>
 
+        <!--  fineract-kyc module: -->
+        <class>org.apache.fineract.kyc.domain.KycAuditLog</class>
+        <class>org.apache.fineract.kyc.domain.KycCase</class>
+        <class>org.apache.fineract.kyc.domain.KycCaseFlag</class>
+        <class>org.apache.fineract.kyc.domain.KycCaseHistory</class>
+        <class>org.apache.fineract.kyc.domain.KycDocument</class>
+        <class>org.apache.fineract.kyc.domain.KycDocumentType</class>
+        <class>org.apache.fineract.kyc.domain.KycFlagType</class>
+        <class>org.apache.fineract.kyc.domain.KycTier</class>
+        <class>org.apache.fineract.kyc.domain.KycTierDocumentRequirement</class>
+        <class>org.apache.fineract.kyc.domain.KycTierRequiredField</class>
+
         <!--  fineract-rates module: -->
         <class>org.apache.fineract.portfolio.floatingrates.domain.FloatingRate</class>
         <class>org.apache.fineract.portfolio.floatingrates.domain.FloatingRatePeriod</class>

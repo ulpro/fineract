@@ -51,6 +51,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+
 @Configuration
 public class LoanProductConfiguration {
 
@@ -82,11 +84,12 @@ public class LoanProductConfiguration {
             DelinquencyBucketRepository delinquencyBucketRepository,
             LoanRepaymentScheduleTransactionProcessorFactory loanRepaymentScheduleTransactionProcessorFactory,
             AdvancedPaymentAllocationsJsonParser advancedPaymentJsonParser, CreditAllocationsJsonParser creditAllocationsJsonParser,
-            LoanProductAssembler loanProductAssembler, LoanProductUpdateUtil loanProductUpdateUtil) {
+            LoanProductAssembler loanProductAssembler, LoanProductUpdateUtil loanProductUpdateUtil,
+            KycTierRepositoryWrapper kycTierRepositoryWrapper) {
         return new LoanProductWritePlatformServiceJpaRepositoryImpl(context, fromApiJsonDeserializer, loanProductRepository, aprCalculator,
                 fundRepository, chargeRepository, rateRepository, accountMappingWritePlatformService, fineractEntityAccessUtil,
                 floatingRateRepository, loanRepositoryWrapper, businessEventNotifierService, delinquencyBucketRepository,
                 loanRepaymentScheduleTransactionProcessorFactory, advancedPaymentJsonParser, creditAllocationsJsonParser,
-                loanProductAssembler, loanProductUpdateUtil);
+                loanProductAssembler, loanProductUpdateUtil, kycTierRepositoryWrapper);
     }
 }

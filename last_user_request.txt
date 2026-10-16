@@ -1,0 +1,65 @@
+<USER_REQUEST>
+comment supprimer tout le plan comptable existant et le remplacer par celui ci
+{
+  "titre": "Plan Comptable des Établissements de Microfinance (PCEMF)",
+  "reference": "COBAC - Commission Bancaire de l'Afrique Centrale - Édition janvier 2010",
+  "classes": [
+    {
+      "numero": "1",
+      "intitule": "COMPTES DE CAPITAUX PERMANENTS",
+      "comptes": [
+        {
+          "numero": "10",
+          "intitule": "CAPITAL, PARTS SOCIALES ET DOTATIONS",
+          "sous_comptes": [
+            {
+              "numero": "100",
+              "intitule": "Parts sociales souscrites appelées",
+              "details": [
+                {
+                  "numero": "1000",
+                  "intitule": "Parts sociales souscrites appelées versées",
+                  "sous_details": [
+                    { "numero": "10000", "intitule": "Parts sociales EMF 1ère catégorie" },
+                    { "numero": "10009", "intitule": "Parts sociales organe faîtier" }
+                  ]
+                },
+                {
+                  "numero": "1001",
+                  "intitule": "Parts sociales souscrites appelées non versées",
+                  "sous_details": [
+                    { "numero": "10010", "intitule": "Parts sociales EMF 1ère catégorie" },
+                    { "numero": "10019", "intitule": "Parts sociales organe faîtier" }
+                  ]
+                }
+              ]
+            },
+            {
+              "numero": "101",
+              "intitule": "Capital social",
+              "details": [
+                { "numero": "1011", "intitule": "Capital souscrit non appelé" },
+                {
+                  "numero": "1012",
+                  "intitule": "Capital souscrit appelé non versé",
+                  "sous_details": [
+                    { "numero": "10120", "intitule": "Capital souscrit non versé EMF 2e et 3e catégorie" },
+                    { "numero": "10129", "intitule": "Capital souscrit non versé organe faîtier" }
+                  ]
+           
+<truncated 45216 bytes>
+e": "Autres crédits CT apparentés" }, { "numero": "3284", "intitule": "Autres crédits CT EMF" }, { "numero": "32849", "intitule": "Autres crédits CT EMF réseau" }] },
+            { "numero": "329", "intitule": "Créances rattachées aux crédits à CT", "details": [{ "numero": "3291", "intitule": "Créances rattachées CT sociétaires" }, { "numero": "3292", "intitule": "Créances rattachées CT clients" }, { "numero": "3293", "intitule": "Créances rattachées CT apparentés" }, { "numero": "3294", "intitule": "Créances rattachées CT EMF" }, { "numero": "32949", "intitule": "Créances rattachées CT EMF réseau" }] }
+          ]
+        },
+        {
+          "numero": "33",
+          "intitule": "CREANCES EN SOUFFRANCE",
+          "sous_comptes": [
+            { "numero": "331", "intitule": "Créances impayées", "details": [{ "numero": "3311", "intitule": "Créances impayées aux EMF", "sous_details": [{ "numero": "33119", "intitule": "Créances impayées aux EMF réseau" }] }, { "numero": "3312", "intitule": "Créances impayées autres débiteurs" }] },
+            { "numero": "332", "intitule": "Créances immobilisées", "details": [{ "numero": "3321", "intitule": "Créances immobilisées aux EMF", "sous_details": [{ "numero": "33219", "intitule": "Créances immobilisées aux EMF réseau" }] }, { "numero": "3322", "intitule": "Créances immobilisées autres débiteurs" }] },
+            { "numero": "333", "intitule": "Créances douteuses couvertes par la garantie de l'Etat", "details": [{ "numero": "3331", "intitule": "Créances douteuses aux EMF couvertes par l'Etat", "sous_details": [{ "numero": "33319", "intitule": "Créances douteuses aux EMF réseau garanties par l'Etat" }] }, { "numero": "3332", "intitule": "Créances douteuses autres débiteurs garanties par l'Etat" }] },
+            { "numero": "334", "intitule": "Créances douteuses co
+<truncated 104908 bytes>
+
+NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.

@@ -53,6 +53,9 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
+import org.apache.fineract.kyc.data.KycTierData;
+import org.apache.fineract.kyc.service.KycTierReadPlatformService;
+
 @RequiredArgsConstructor
 public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlatformService {
 
@@ -64,6 +67,7 @@ public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlat
     private final ProductToGLAccountMappingReadPlatformService accountMappingReadPlatformService;
     private final PaginationHelper shareProductDataPaginationHelper;
     private final DatabaseSpecificSQLGenerator sqlGenerator;
+    private final KycTierReadPlatformService kycTierReadPlatformService;
 
     @Override
     public Page<ProductData> retrieveAllProducts(Integer offSet, Integer limit) {
@@ -119,6 +123,7 @@ public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlat
                         .retrieveAccountMappingOptionsForShareProducts();
                 data = ShareProductData.template(data, currencyOptions, chargeOptions, minimumActivePeriodFrequencyTypeOptions,
                         lockinPeriodFrequencyTypeOptions, accountingMappingOptions);
+                data.withKycTierOptions(this.kycTierReadPlatformService.retrieveAllActive());
             }
             return data;
         } catch (final EmptyResultDataAccessException e) {
@@ -136,8 +141,10 @@ public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlat
                 .retrieveMinimumActivePeriodFrequencyTypeOptions();
         final Map<String, List<GLAccountData>> accountingMappingOptions = this.accountingDropdownReadPlatformService
                 .retrieveAccountMappingOptionsForShareProducts();
-        return ShareProductData.template(currencyOptions, chargeOptions, minimumActivePeriodFrequencyTypeOptions,
+        final ShareProductData templateData = ShareProductData.template(currencyOptions, chargeOptions, minimumActivePeriodFrequencyTypeOptions,
                 lockinPeriodFrequencyTypeOptions, accountingMappingOptions);
+        templateData.withKycTierOptions(this.kycTierReadPlatformService.retrieveAllActive());
+        return templateData;
     }
 
     @Override
@@ -208,10 +215,12 @@ public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlat
                     .append("shareproduct.createdby_id, created.username as createdName, modified.username as modifiedName, ")
                     .append("shareproduct.created_date, shareproduct.lastmodifiedby_id, shareproduct.lastmodified_date, ")
                     .append("curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, ")
-                    .append("curr.display_symbol as currencyDisplaySymbol ").append("from m_share_product shareproduct ")
+                    .append("curr.display_symbol as currencyDisplaySymbol, ")
+                    .append("kt.id as kycTierId, kt.code as kycTierCode, kt.name as kycTierName, kt.level as kycTierLevel ").append("from m_share_product shareproduct ")
                     .append("LEFT JOIN m_currency curr on curr.code = shareproduct.currency_code ")
                     .append("LEFT JOIN m_appuser created ON created.id = shareproduct.createdby_id ")
-                    .append("LEFT JOIN m_appuser modified ON modified.id = shareproduct.lastmodifiedby_id ");
+                    .append("LEFT JOIN m_appuser modified ON modified.id = shareproduct.lastmodifiedby_id ")
+                    .append("LEFT JOIN m_kyc_tier kt ON kt.id = shareproduct.kyc_tier_id ");
 
         }
 
@@ -260,10 +269,23 @@ public class ShareProductReadPlatformServiceImpl implements ShareProductReadPlat
             final Integer accountingRuleId = JdbcSupport.getInteger(rs, "accountingType");
             final EnumOptionData accountingRuleType = AccountingEnumerations.accountingRuleType(accountingRuleId);
 
-            return ShareProductData.data(id, name, shortName, description, externalId, currency, totalShares, issuedShares, unitPrice,
+            final Long kycTierId = JdbcSupport.getLong(rs, "kycTierId");
+            KycTierData kycTierData = null;
+            if (kycTierId != null) {
+                final String kycTierCode = rs.getString("kycTierCode");
+                final String kycTierName = rs.getString("kycTierName");
+                final Integer kycTierLevel = JdbcSupport.getInteger(rs, "kycTierLevel");
+                kycTierData = KycTierData.builder().id(kycTierId).code(kycTierCode).name(kycTierName).level(kycTierLevel).build();
+            }
+
+            final ShareProductData productData = ShareProductData.data(id, name, shortName, description, externalId, currency, totalShares, issuedShares, unitPrice,
                     capitalAmount, minimumClientShares, nominalClientShares, maximumClientShares, shareMarketCollection, charges,
                     allowDividendsForInactiveClients, lockinPeriodFrequency, lockinPeriodFrequencyType, minimumActivePeriod,
                     minimumActivePeriodType, accountingRuleType);
+            if (kycTierData != null) {
+                productData.withKycTier(kycTierData);
+            }
+            return productData;
         }
 
         public String schema() {

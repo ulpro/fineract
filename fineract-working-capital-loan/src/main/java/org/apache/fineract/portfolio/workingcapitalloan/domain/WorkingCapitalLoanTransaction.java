@@ -123,6 +123,14 @@ public class WorkingCapitalLoanTransaction extends AbstractAuditableWithUTCDateT
         return txn;
     }
 
+    public static WorkingCapitalLoanTransaction goodwillCredit(final WorkingCapitalLoan loan, final BigDecimal amount,
+            final PaymentDetail paymentDetail, final LocalDate transactionDate, final CodeValue classification,
+            final ExternalId externalId) {
+        final WorkingCapitalLoanTransaction txn = new WorkingCapitalLoanTransaction();
+        txn.initialize(loan, LoanTransactionType.GOODWILL_CREDIT, transactionDate, amount, paymentDetail, classification, externalId);
+        return txn;
+    }
+
     public static WorkingCapitalLoanTransaction creditBalanceRefund(final WorkingCapitalLoan loan, final BigDecimal amount,
             final PaymentDetail paymentDetail, final LocalDate transactionDate, final CodeValue classification,
             final ExternalId externalId) {
@@ -131,11 +139,35 @@ public class WorkingCapitalLoanTransaction extends AbstractAuditableWithUTCDateT
         return txn;
     }
 
+    public static WorkingCapitalLoanTransaction discountFeeAmortization(final WorkingCapitalLoan loan, final BigDecimal amount,
+            final LocalDate transactionDate, final ExternalId externalId) {
+        final WorkingCapitalLoanTransaction txn = new WorkingCapitalLoanTransaction();
+        txn.initialize(loan, LoanTransactionType.DISCOUNT_FEE_AMORTIZATION, transactionDate, amount, null, null, externalId);
+        return txn;
+    }
+
     public static WorkingCapitalLoanTransaction discountFee(final WorkingCapitalLoan loan, final ExternalId externalId,
             final BigDecimal amount, final LocalDate transactionDate, final CodeValue classification, final PaymentDetail paymentDetail) {
         WorkingCapitalLoanTransaction transaction = new WorkingCapitalLoanTransaction();
         transaction.wcLoan = loan;
         transaction.transactionType = LoanTransactionType.DISCOUNT_FEE;
+        transaction.transactionAmount = amount;
+        transaction.transactionDate = transactionDate;
+        transaction.submittedOnDate = transactionDate;
+        transaction.externalId = externalId != null ? externalId : ExternalId.empty();
+        transaction.paymentDetail = paymentDetail;
+        transaction.classification = classification;
+        transaction.reversed = false;
+        transaction.reversalExternalId = null;
+        transaction.reversedOnDate = null;
+        return transaction;
+    }
+
+    public static WorkingCapitalLoanTransaction discountFeeAdjustment(final WorkingCapitalLoan loan, final ExternalId externalId,
+            final BigDecimal amount, final LocalDate transactionDate, final CodeValue classification, final PaymentDetail paymentDetail) {
+        WorkingCapitalLoanTransaction transaction = new WorkingCapitalLoanTransaction();
+        transaction.wcLoan = loan;
+        transaction.transactionType = LoanTransactionType.DISCOUNT_FEE_ADJUSTMENT;
         transaction.transactionAmount = amount;
         transaction.transactionDate = transactionDate;
         transaction.submittedOnDate = transactionDate;

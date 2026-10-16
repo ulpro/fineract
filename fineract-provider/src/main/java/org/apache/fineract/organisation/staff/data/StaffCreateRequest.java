@@ -20,13 +20,13 @@ package org.apache.fineract.organisation.staff.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.io.Serial;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Length;
 
 @Builder
 @Data
@@ -40,20 +40,20 @@ public class StaffCreateRequest implements Serializable {
     // @Min(value = 1, message = "{org.apache.fineract.organisation.staff.office-id.min}")
     @NotNull(message = "{org.apache.fineract.organisation.staff.office-id.not-null}")
     private Long officeId;
-    @Length(max = 50, message = "{org.apache.fineract.organisation.staff.firstname.max}")
+    @Size(max = 50, message = "{org.apache.fineract.organisation.staff.firstname.max}")
     @NotNull(message = "{org.apache.fineract.organisation.staff.firstname.not-null}")
     private String firstname;
-    @Length(max = 50, message = "{org.apache.fineract.organisation.staff.lastname.max}")
+    @Size(max = 50, message = "{org.apache.fineract.organisation.staff.lastname.max}")
     @NotNull(message = "{org.apache.fineract.organisation.staff.lastname.not-null}")
     private String lastname;
     @JsonProperty("isLoanOfficer")
     private Boolean isLoanOfficer;
-    @Length(max = 100, message = "{org.apache.fineract.organisation.staff.external-id.max}")
+    @Size(max = 100, message = "{org.apache.fineract.organisation.staff.external-id.max}")
     // @NotBlank(message = "{org.apache.fineract.organisation.staff.external-id.not-blank}")
     private String externalId;
-    @Length(max = 50, message = "{org.apache.fineract.organisation.staff.email.max}")
+    @Size(max = 50, message = "{org.apache.fineract.organisation.staff.email.max}")
     private String emailAddress;
-    @Length(max = 50, message = "{org.apache.fineract.organisation.staff.mobile-no.max}")
+    @Size(max = 50, message = "{org.apache.fineract.organisation.staff.mobile-no.max}")
     // @NotBlank(message = "{org.apache.fineract.organisation.staff.mobile-no.not-blank}")
     private String mobileNo;
     @Builder.Default

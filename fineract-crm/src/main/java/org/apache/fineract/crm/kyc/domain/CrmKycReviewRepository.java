@@ -1,0 +1,55 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.fineract.crm.kyc.domain;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CrmKycReviewRepository extends JpaRepository<CrmKycReview, Long> {
+
+    List<CrmKycReview> findByProspectIdOrderByReviewDateDesc(Long prospectId);
+
+    List<CrmKycReview> findByClientIdOrderByReviewDateDesc(Long clientId);
+
+    /** Dernière revue d'un prospect. */
+    Optional<CrmKycReview> findFirstByProspectIdOrderByReviewDateDesc(Long prospectId);
+
+    /** Dernière revue d'un client. */
+    Optional<CrmKycReview> findFirstByClientIdOrderByReviewDateDesc(Long clientId);
+
+    /**
+     * SF-01-06 : Revues dont la prochaine date est dépassée (relances).
+     */
+    @Query("SELECT r FROM CrmKycReview r WHERE r.nextReviewDate IS NOT NULL "
+            + "AND r.nextReviewDate <= :today AND r.statusEnum = 1")
+    List<CrmKycReview> findOverdueReviews(@Param("today") LocalDate today);
+
+    /**
+     * SF-01-06 : Revues dues dans les prochains {@code days} jours.
+     */
+    @Query("SELECT r FROM CrmKycReview r WHERE r.nextReviewDate IS NOT NULL "
+            + "AND r.nextReviewDate >= :today AND r.nextReviewDate <= :limit AND r.statusEnum = 1")
+    List<CrmKycReview> findReviewsDueBetween(@Param("today") LocalDate today, @Param("limit") LocalDate limit);
+}

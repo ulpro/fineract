@@ -155,7 +155,7 @@ We recommend using the JAR instead of the WAR file deployment, because it's much
 How to run using Docker or Podman
 ---
 
-It is possible to do a 'one-touch' installation of Fineract using containers (AKA "Docker").
+It is possible to do a 'one-touch' installation of Fineract using containers (AKA "Docker") for dev/test convenience and local/offline demos.
 This includes the database running in the container.
 
 As prerequisites, you must have `docker` and `docker-compose` installed on your machine; see
@@ -164,6 +164,9 @@ As prerequisites, you must have `docker` and `docker-compose` installed on your 
 Alternatively, you can also use [Podman](https://github.com/containers/libpod)
 (e.g. via `dnf install podman-docker`), and [Podman Compose](https://github.com/containers/podman-compose/)
 (e.g. via `pip3 install podman-compose`) instead of Docker.
+
+> [!CAUTION]
+> Our images are NOT production-ready. For example, notice how the `test` Spring profile is enabled via `fineract-common.env`, included by `docker-compose.yml`, but `test` must not be enabled in production. YOU are responsible for securing your production instances. See [How to run for production](#how-to-run-for-production).
 
 To run a new Fineract instance on Linux you can simply:
 ```bash
@@ -413,5 +416,3 @@ PLATFORM API
 Fineract does not provide a UI, but provides an API. Running Fineract locally, the Swagger documentation can be accessed under `https://localhost:8443/fineract-provider/swagger-ui/index.html`. A live version can be accessed via [this Sandbox](https://sandbox.mifos.community/fineract-provider/swagger-ui/index.html) (not hosted by us).
 
 Apache Fineract supports client code generation using [Swagger Codegen](https://github.com/swagger-api/swagger-codegen) based on the [OpenAPI Specification](https://swagger.io/specification/). For more instructions on how to generate client code, check [this section](https://fineract.apache.org/docs/current/#_generate_api_client) of the Fineract documentation. [This video](https://www.youtube.com/watch?v=FlVd-0YAo6c) documents the use of the Swagger-UI.
-
-# fineract

@@ -35,6 +35,14 @@ public final class PaymentDetailConstants {
     public static final String receiptNumberParamName = "receiptNumber";
     public static final String bankNumberParamName = "bankNumber";
 
+    // depositor information parameters
+    public static final String depositorNameParamName = "depositorName";
+    public static final String depositorNationalityParamName = "depositorNationality";
+    public static final String depositorIdTypeParamName = "depositorIdType";
+    public static final String depositorIdNumberParamName = "depositorIdNumber";
+    public static final String depositorIdIssuedAtParamName = "depositorIdIssuedAt";
+    public static final String depositorPurposeParamName = "depositorPurpose";
+
     // template related part of response
     public static final String officeOptionsParamName = "paymentTypeOptions";
 }

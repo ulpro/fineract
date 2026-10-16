@@ -68,11 +68,13 @@ public class GLAccountReadPlatformServiceImpl implements GLAccountReadPlatformSe
                     " gl.id as id, name as name, parent_id as parentId, gl_code as glCode, disabled as disabled, manual_journal_entries_allowed as manualEntriesAllowed, ")
                     .append("classification_enum as classification, account_usage as accountUsage, gl.description as description, ")
                     .append(NAME_DECORATED_BASE_ON_HIERARCHY).append(" as nameDecorated, ")
-                    .append("cv.id as codeId, cv.code_value as codeValue ");
+                    .append("cv.id as codeId, cv.code_value as codeValue, ")
+                    .append("rcp.cobac_code as cobacCode, rcp.libelle_cobac as cobacDescription ");
             if (this.associationParametersData.isRunningBalanceRequired()) {
                 sb.append(",gl_j.organization_running_balance as organizationRunningBalance ");
             }
-            sb.append("from acc_gl_account gl left join m_code_value cv on tag_id=cv.id ");
+            sb.append("from acc_gl_account gl left join m_code_value cv on tag_id=cv.id ")
+              .append("left join ref_cobac_pcemf rcp on rcp.pcemf_code COLLATE utf8mb4_unicode_ci = gl.gl_code ");
             if (this.associationParametersData.isRunningBalanceRequired()) {
                 sb.append("left outer Join acc_gl_journal_entry gl_j on gl_j.account_id = gl.id");
             }
@@ -97,13 +99,18 @@ public class GLAccountReadPlatformServiceImpl implements GLAccountReadPlatformSe
             final Long codeId = rs.wasNull() ? null : rs.getLong("codeId");
             final String codeValue = rs.getString("codeValue");
             final CodeValueData tagId = CodeValueData.instance(codeId, codeValue);
+            
+            final String cobacCode = rs.getString("cobacCode");
+            final String cobacDescription = rs.getString("cobacDescription");
+
             Long organizationRunningBalance = null;
             if (associationParametersData.isRunningBalanceRequired()) {
                 organizationRunningBalance = rs.getLong("organizationRunningBalance");
             }
             return new GLAccountData().setId(id).setName(name).setParentId(parentId).setGlCode(glCode).setDisabled(disabled)
                     .setManualEntriesAllowed(manualEntriesAllowed).setType(accountType).setUsage(usage).setDescription(description)
-                    .setNameDecorated(nameDecorated).setTagId(tagId).setOrganizationRunningBalance(organizationRunningBalance);
+                    .setNameDecorated(nameDecorated).setTagId(tagId).setOrganizationRunningBalance(organizationRunningBalance)
+                    .setCobacCode(cobacCode).setCobacDescription(cobacDescription);
         }
     }
 

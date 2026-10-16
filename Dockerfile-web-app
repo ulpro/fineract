@@ -1,0 +1,51 @@
+# ==============================================================================
+# STAGE 1: Build the Angular Application
+# ==============================================================================
+FROM node:20-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Set the environment variable to increase Node.js memory limit for heavy builds
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Install git since some npm dependencies might resolve from GitHub
+RUN apk add --no-cache git
+
+# Copy package descriptors first to take advantage of Docker layer caching
+COPY package*.json ./
+
+# Install project dependencies
+RUN npm ci
+
+# Copy the rest of the application source code
+COPY . .
+
+# Build the application for production
+RUN npm run build -- --configuration production
+
+# ==============================================================================
+# STAGE 2: Serve the application using Nginx
+# ==============================================================================
+FROM nginx:1.25-alpine
+
+# Install envsubst for runtime environment variable substitution
+RUN apk add --no-cache gettext
+
+# Remove default Nginx configuration
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy custom Nginx configuration to support SPA routing (avoiding 404s on refresh)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy build output from the builder stage
+# NOTE: In standard Angular configurations, the build output is generated in 
+# 'dist/' or 'dist/<app-name>'. Adjust the source path below if needed.
+COPY --from=builder /usr/src/app/dist/ /usr/share/nginx/html/
+
+# Expose HTTP port 80
+EXPOSE 80
+
+# At startup, substitute environment variables in assets/env.template.js if it exists,
+# then start Nginx in the foreground.
+# This allows configuring the backend URL dynamically at runtime using FINERACT_API_URL.
+CMD ["/bin/sh", "-c", "if [ -f /usr/share/nginx/html/assets/env.template.js ]; then envsubst < /usr/share/nginx/html/assets/env.template.js > /usr/share/nginx/html/assets/env.js; fi && exec nginx -g 'daemon off;'"]

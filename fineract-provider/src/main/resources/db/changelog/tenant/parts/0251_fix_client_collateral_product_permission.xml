@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet id="1" author="fineract">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM m_permission WHERE code = 'READ_CLIENT_COLLATERAL_PRODUCT';
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO m_permission (grouping, code, entity_name, action_name, can_maker_checker) 
+            VALUES ('portfolio', 'READ_CLIENT_COLLATERAL_PRODUCT', 'CLIENT_COLLATERAL_PRODUCT', 'READ', 0);
+        </sql>
+    </changeSet>
+</databaseChangeLog>

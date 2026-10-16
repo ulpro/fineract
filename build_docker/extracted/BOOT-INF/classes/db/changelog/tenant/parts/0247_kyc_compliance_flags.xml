@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="1" author="fineract">
+        <createTable tableName="m_kyc_flag_type">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="override_status_enum" type="INT" remarks="If active, this flag forces the KYC Case to this status (e.g. 400 for RENFORCE, 500 for REJETE)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2" author="fineract">
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="DOCUMENT_EXPIRED"/>
+            <column name="name" value="Document Expiré"/>
+            <column name="description" value="Un ou plusieurs documents obligatoires ont expiré."/>
+            <column name="override_status_enum" valueNumeric="300"/> <!-- EN_REVISION -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="EXPIRING_SOON"/>
+            <column name="name" value="Document Expirant Bientôt"/>
+            <column name="description" value="Un document arrive à expiration dans moins de 30 jours."/>
+            <!-- No override, case stays CONFORME -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="PERIODIC_REVIEW_DUE"/>
+            <column name="name" value="Révision Périodique Échue"/>
+            <column name="description" value="La date de validité globale du profil a été atteinte."/>
+            <column name="override_status_enum" valueNumeric="300"/> <!-- EN_REVISION -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="PEP"/>
+            <column name="name" value="Personne Politiquement Exposée"/>
+            <column name="description" value="Le client a été identifié comme une Personne Politiquement Exposée."/>
+            <column name="override_status_enum" valueNumeric="400"/> <!-- RENFORCE -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="EDD_REQUIRED"/>
+            <column name="name" value="Vigilance Renforcée Requise"/>
+            <column name="description" value="Des doutes ou le profil client exigent une vigilance accrue."/>
+            <column name="override_status_enum" valueNumeric="400"/> <!-- RENFORCE -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="FRAUD_SUSPECTED"/>
+            <column name="name" value="Suspicion de Fraude"/>
+            <column name="description" value="Des éléments laissent penser que le dossier pourrait être frauduleux."/>
+            <column name="override_status_enum" valueNumeric="500"/> <!-- REJETE -->
+        </insert>
+        <insert tableName="m_kyc_flag_type">
+            <column name="code" value="SANCTION_MATCH"/>
+            <column name="name" value="Alerte Sanctions/Embargos"/>
+            <column name="description" value="Le client correspond à une entrée sur une liste de sanctions (OFAC, ONU, etc.)."/>
+            <column name="override_status_enum" valueNumeric="500"/> <!-- REJETE -->
+        </insert>
+    </changeSet>
+
+    <changeSet id="3" author="fineract">
+        <createTable tableName="m_kyc_case_flag">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="kyc_case_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_kyc_case_flag_case" referencedTableName="m_kyc_case" referencedColumnNames="id"/>
+            </column>
+            <column name="kyc_flag_type_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_kyc_case_flag_type" referencedTableName="m_kyc_flag_type" referencedColumnNames="id"/>
+            </column>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remarks" type="VARCHAR(1000)"/>
+            <column name="resolution_remarks" type="VARCHAR(1000)"/>
+            
+            <column name="created_date" type="DATETIME"/>
+            <column name="createdby_id" type="BIGINT"/>
+            <column name="lastmodified_date" type="DATETIME"/>
+            <column name="lastmodifiedby_id" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="4" author="fineract" dbms="postgresql">
+        <sql>
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%EXPIRING_SOON%' AND ft.code = 'EXPIRING_SOON';
+
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%PERIODIC_REVIEW_DUE%' AND ft.code = 'PERIODIC_REVIEW_DUE';
+            
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%DOCUMENT_EXPIRED%' AND ft.code = 'DOCUMENT_EXPIRED';
+        </sql>
+    </changeSet>
+    
+    <changeSet id="4-mysql" author="fineract" dbms="mysql, mariadb">
+        <sql>
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%EXPIRING_SOON%' AND ft.code = 'EXPIRING_SOON';
+
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%PERIODIC_REVIEW_DUE%' AND ft.code = 'PERIODIC_REVIEW_DUE';
+            
+            INSERT INTO m_kyc_case_flag (kyc_case_id, kyc_flag_type_id, status_enum, created_date)
+            SELECT kc.id, ft.id, 100, CURRENT_TIMESTAMP
+            FROM m_kyc_case kc
+            CROSS JOIN m_kyc_flag_type ft
+            WHERE kc.risk_flags LIKE '%DOCUMENT_EXPIRED%' AND ft.code = 'DOCUMENT_EXPIRED';
+        </sql>
+    </changeSet>
+
+    <changeSet id="5" author="fineract">
+        <dropColumn tableName="m_kyc_case" columnName="risk_flags"/>
+    </changeSet>
+
+</databaseChangeLog>

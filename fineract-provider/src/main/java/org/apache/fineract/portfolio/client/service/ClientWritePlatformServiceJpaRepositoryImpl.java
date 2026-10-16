@@ -56,6 +56,7 @@ import org.apache.fineract.infrastructure.event.business.domain.client.ClientCre
 import org.apache.fineract.infrastructure.event.business.domain.client.ClientRejectBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.kyc.service.KycEvaluationService;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
@@ -124,6 +125,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     private final BusinessEventNotifierService businessEventNotifierService;
     private final EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService;
     private final ExternalIdFactory externalIdFactory;
+    private final KycEvaluationService kycEvaluationService;
 
     @Transactional
     @Override
@@ -676,6 +678,11 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                     extractAndCreateClientNonPerson(clientForUpdate, command);
                 }
             }
+
+            if (!changes.isEmpty()) {
+                this.kycEvaluationService.evaluateKycStatus(clientId);
+            }
+
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
                     .withEntityExternalId(clientForUpdate.getExternalId()) //

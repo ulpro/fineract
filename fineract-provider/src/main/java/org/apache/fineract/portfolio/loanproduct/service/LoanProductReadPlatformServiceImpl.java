@@ -39,6 +39,7 @@ import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecific
 import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityType;
 import org.apache.fineract.infrastructure.entityaccess.service.FineractEntityAccessUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.kyc.data.KycTierData;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
@@ -302,8 +303,10 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lp.capitalized_income_strategy as capitalizedIncomeStrategy, " //
                     + "lp.capitalized_income_type as capitalizedIncomeType, lp.is_merchant_buy_down_fee as merchantBuyDownFee, " //
                     + "lp.enable_buy_down_fee as enableBuyDownFee, " + "lp.buy_down_fee_calculation_type as buyDownFeeCalculationType, "
-                    + "lp.buy_down_fee_strategy as buyDownFeeStrategy, " + "lp.buy_down_fee_income_type as buyDownFeeIncomeType "
+                    + "lp.buy_down_fee_strategy as buyDownFeeStrategy, " + "lp.buy_down_fee_income_type as buyDownFeeIncomeType, "
+                    + "kt.id as kycTierId, kt.code as kycTierCode, kt.name as kycTierName, kt.level as kycTierLevel "
                     + " from m_product_loan lp " + " left join m_fund f on f.id = lp.fund_id "
+                    + " left join m_kyc_tier kt on kt.id = lp.kyc_tier_id "
                     + " left join m_product_loan_recalculation_details lpr on lpr.product_id=lp.id "
                     + " left join m_product_loan_guarantee_details lpg on lpg.loan_product_id=lp.id "
                     + " left join m_product_loan_configurable_attributes lca on lca.loan_product_id = lp.id "
@@ -583,7 +586,16 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     rs.getString("buyDownFeeIncomeType"));
             final boolean merchantBuyDownFee = rs.getBoolean("merchantBuyDownFee");
 
-            return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
+            final Long kycTierId = JdbcSupport.getLong(rs, "kycTierId");
+            KycTierData kycTierData = null;
+            if (kycTierId != null) {
+                final String kycTierCode = rs.getString("kycTierCode");
+                final String kycTierName = rs.getString("kycTierName");
+                final Integer kycTierLevel = JdbcSupport.getInteger(rs, "kycTierLevel");
+                kycTierData = KycTierData.builder().id(kycTierId).code(kycTierCode).name(kycTierName).level(kycTierLevel).build();
+            }
+
+            final LoanProductData loanProductData = new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                     numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
                     minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType,
                     interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
@@ -610,6 +622,10 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     daysInYearCustomStrategy, enableIncomeCapitalization, capitalizedIncomeCalculationType, capitalizedIncomeStrategy,
                     capitalizedIncome, enableBuyDownFee, buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType,
                     merchantBuyDownFee, null, null);
+            if (kycTierData != null) {
+                loanProductData.withKycTier(kycTierData);
+            }
+            return loanProductData;
         }
     }
 

@@ -47,6 +47,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.apache.fineract.kyc.service.KycTierReadPlatformService;
+
 @Configuration
 public class ShareProductsConfiguration {
 
@@ -86,10 +88,11 @@ public class ShareProductsConfiguration {
             ShareProductDropdownReadPlatformService shareProductDropdownReadPlatformService,
             AccountingDropdownReadPlatformService accountingDropdownReadPlatformService,
             ProductToGLAccountMappingReadPlatformService accountMappingReadPlatformService,
-            PaginationHelper shareProductDataPaginationHelper, DatabaseSpecificSQLGenerator sqlGenerator) {
+            PaginationHelper shareProductDataPaginationHelper, DatabaseSpecificSQLGenerator sqlGenerator,
+            KycTierReadPlatformService kycTierReadPlatformService) {
         return new ShareProductReadPlatformServiceImpl(jdbcTemplate, currencyReadPlatformService, chargeReadPlatformService,
                 shareProductDropdownReadPlatformService, accountingDropdownReadPlatformService, accountMappingReadPlatformService,
-                shareProductDataPaginationHelper, sqlGenerator);
+                shareProductDataPaginationHelper, sqlGenerator, kycTierReadPlatformService);
     }
 
     @Bean

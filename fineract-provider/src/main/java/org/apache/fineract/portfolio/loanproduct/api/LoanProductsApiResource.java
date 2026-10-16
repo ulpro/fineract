@@ -112,6 +112,8 @@ import org.apache.fineract.portfolio.paymenttype.data.PaymentTypeData;
 import org.apache.fineract.portfolio.paymenttype.service.PaymentTypeReadService;
 import org.apache.fineract.portfolio.rate.data.RateData;
 import org.apache.fineract.portfolio.rate.service.RateReadService;
+import org.apache.fineract.kyc.data.KycTierData;
+import org.apache.fineract.kyc.service.KycTierReadPlatformService;
 import org.springframework.stereotype.Component;
 
 @Path("/v1/loanproducts")
@@ -142,7 +144,8 @@ public class LoanProductsApiResource {
             LoanProductConstants.CAPITALIZED_INCOME_CALCULATION_TYPE_PARAM_NAME,
             LoanProductConstants.CAPITALIZED_INCOME_STRATEGY_PARAM_NAME, LoanProductConstants.CAPITALIZED_INCOME_TYPE_PARAM_NAME,
             LoanProductConstants.ENABLE_BUY_DOWN_FEE_PARAM_NAME, LoanProductConstants.BUY_DOWN_FEE_CALCULATION_TYPE_PARAM_NAME,
-            LoanProductConstants.BUY_DOWN_FEE_STRATEGY_PARAM_NAME, LoanProductConstants.BUY_DOWN_FEE_INCOME_TYPE_PARAM_NAME));
+            LoanProductConstants.BUY_DOWN_FEE_STRATEGY_PARAM_NAME, LoanProductConstants.BUY_DOWN_FEE_INCOME_TYPE_PARAM_NAME,
+            "kycTier", "kycTierOptions", "kycTierId"));
 
     private static final Set<String> PRODUCT_MIX_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList("productId", "productName", "restrictedProducts", "allowedProducts", "productOptions"));
@@ -171,6 +174,7 @@ public class LoanProductsApiResource {
     private final ConfigurationDomainService configurationDomainService;
     private final DelinquencyReadPlatformService delinquencyReadPlatformService;
     private final CodeValueReadPlatformService codeValueReadPlatformService;
+    private final KycTierReadPlatformService kycTierReadPlatformService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -241,7 +245,7 @@ public class LoanProductsApiResource {
             this.context.authenticatedUser().validateHasReadPermission(PRODUCTMIX);
 
             final Collection<LoanProductData> productOptions = this.loanProductReadPlatformService.retrieveAvailableLoanProductsForMix();
-            final ProductMixData productMixData = ProductMixData.template(productOptions);
+            final ProductMixData productMixData = ProductMixData.builder().productOptions(productOptions).build();
             return this.productMixDataApiJsonSerializer.serialize(settings, productMixData, PRODUCT_MIX_DATA_PARAMETERS);
         }
 
@@ -483,7 +487,9 @@ public class LoanProductsApiResource {
         final List<CodeValueData> buydownFeeClassificationOptions = codeValueReadPlatformService
                 .retrieveCodeValuesByCode(LoanTransactionApiConstants.BUY_DOWN_FEE_CLASSIFICATION_CODE);
 
-        return new LoanProductData(productData, chargeOptions, penaltyOptions, paymentTypeOptions, currencyOptions, amortizationTypeOptions,
+        final List<KycTierData> kycTierOptions = this.kycTierReadPlatformService.retrieveAllActive();
+
+        final LoanProductData templateData = new LoanProductData(productData, chargeOptions, penaltyOptions, paymentTypeOptions, currencyOptions, amortizationTypeOptions,
                 interestTypeOptions, interestCalculationPeriodTypeOptions, repaymentFrequencyTypeOptions, interestRateFrequencyTypeOptions,
                 fundOptions, transactionProcessingStrategyOptions, rateOptions, accountOptions, accountingRuleTypeOptions,
                 loanCycleValueConditionTypeOptions, daysInMonthTypeOptions, daysInYearTypeOptions,
@@ -497,6 +503,7 @@ public class LoanProductsApiResource {
                 daysInYearCustomStrategyOptions, capitalizedIncomeCalculationTypeOptions, capitalizedIncomeStrategyOptions,
                 capitalizedIncomeTypeOptions, buyDownFeeCalculationTypeOptions, buyDownFeeStrategyOptions, buyDownFeeIncomeTypeOptions,
                 writeOffReasonOptions, capitalizedIncomeClassificationOptions, buydownFeeClassificationOptions);
+        return templateData.withKycTierOptions(kycTierOptions);
     }
 
 }

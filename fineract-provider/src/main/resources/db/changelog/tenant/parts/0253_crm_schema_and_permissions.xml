@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet author="neobt-crm" id="0253-crm-schema-and-permissions">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="crm_prospect"/>
+            </not>
+        </preConditions>
+
+        <!-- 1. CRM PROSPECT -->
+        <createTable tableName="crm_prospect">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="external_id" type="VARCHAR(100)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="firstname" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lastname" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mobile_no" type="VARCHAR(50)"/>
+            <column name="email" type="VARCHAR(100)"/>
+            <column name="office_id" type="BIGINT"/>
+            <column name="staff_id" type="BIGINT"/>
+            <column name="legal_form_enum" type="INT"/>
+            <column name="source_cv_id" type="BIGINT"/>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT"/>
+            <column name="notes" type="TEXT"/>
+            <column name="createdby_id" type="BIGINT"/>
+            <column name="created_date" type="DATETIME"/>
+            <column name="lastmodifiedby_id" type="BIGINT"/>
+            <column name="lastmodified_date" type="DATETIME"/>
+        </createTable>
+
+        <!-- 2. CRM CONSENT -->
+        <createTable tableName="crm_consent">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT"/>
+            <column name="prospect_id" type="BIGINT"/>
+            <column name="channel_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="purpose" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_granted" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="granted_date" type="DATETIME"/>
+            <column name="revoked_date" type="DATETIME"/>
+            <column name="proof" type="TEXT"/>
+        </createTable>
+
+        <!-- 3. CRM COMPLAINT (Réclamations) -->
+        <createTable tableName="crm_complaint">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ticket_number" type="VARCHAR(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="account_id" type="BIGINT"/>
+            <column name="transaction_id" type="BIGINT"/>
+            <column name="channel_cv_id" type="BIGINT"/>
+            <column name="category_cv_id" type="BIGINT"/>
+            <column name="priority_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assigned_to_user_id" type="BIGINT"/>
+            <column name="office_id" type="BIGINT"/>
+            <column name="description" type="TEXT"/>
+            <column name="resolution_summary" type="TEXT"/>
+            <column name="satisfaction_score" type="INT"/>
+            <column name="is_fraud" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="target_resolution_date" type="DATETIME"/>
+            <column name="resolved_date" type="DATETIME"/>
+            <column name="closed_date" type="DATETIME"/>
+        </createTable>
+
+        <!-- 4. CRM INTERACTION -->
+        <createTable tableName="crm_interaction">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="channel_cv_id" type="BIGINT"/>
+            <column name="staff_id" type="BIGINT"/>
+            <column name="subject" type="VARCHAR(255)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="interaction_date" type="DATETIME"/>
+            <column name="latitude" type="DECIMAL(10, 8)"/>
+            <column name="longitude" type="DECIMAL(11, 8)"/>
+        </createTable>
+
+        <!-- 5. CRM TASK -->
+        <createTable tableName="crm_task">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT"/>
+            <column name="type_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subject" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="due_date" type="DATETIME"/>
+            <column name="priority_enum" type="INT"/>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assigned_to_user_id" type="BIGINT"/>
+        </createTable>
+
+        <!-- 6. CRM SEGMENT & MEMBER -->
+        <createTable tableName="crm_segment">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="rules_json" type="TEXT"/>
+            <column name="is_active" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_run_date" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="crm_segment_member">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="segment_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="added_date" type="DATETIME"/>
+        </createTable>
+
+        <!-- 7. CRM OPPORTUNITY -->
+        <createTable tableName="crm_opportunity">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT"/>
+            <column name="prospect_id" type="BIGINT"/>
+            <column name="product_id" type="BIGINT"/>
+            <column name="estimated_amount" type="DECIMAL(19, 6)"/>
+            <column name="probability" type="INT"/>
+            <column name="stage_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="loss_reason_cv_id" type="BIGINT"/>
+            <column name="loan_id" type="BIGINT"/>
+            <column name="savings_id" type="BIGINT"/>
+            <column name="assigned_staff_id" type="BIGINT"/>
+        </createTable>
+
+        <!-- 8. CRM CAMPAIGN & TARGET -->
+        <createTable tableName="crm_campaign">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="segment_id" type="BIGINT"/>
+            <column name="channel_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="template_text" type="TEXT"/>
+            <column name="scheduled_date" type="DATETIME"/>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="crm_campaign_target">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="DATETIME"/>
+            <column name="converted_at" type="DATETIME"/>
+        </createTable>
+
+        <!-- 9. CRM LOYALTY ACCOUNT, LEDGER, REFERRAL -->
+        <createTable tableName="crm_loyalty_account">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="points_balance" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tier_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="crm_loyalty_ledger">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="points" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="VARCHAR(50)"/>
+            <column name="description" type="TEXT"/>
+            <column name="created_date" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="crm_referral">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="referrer_client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="referred_client_id" type="BIGINT"/>
+            <column name="referral_code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reward_amount" type="DECIMAL(19, 6)"/>
+        </createTable>
+
+        <!-- PERMISSIONS CRM -->
+        <insert tableName="m_permission">
+            <column name="grouping" value="crm"/>
+            <column name="code" value="READ_CRM_PROSPECT"/>
+            <column name="action_name" value="READ"/>
+            <column name="entity_name" value="CRM_PROSPECT"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="crm"/>
+            <column name="code" value="CREATE_CRM_PROSPECT"/>
+            <column name="action_name" value="CREATE"/>
+            <column name="entity_name" value="CRM_PROSPECT"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="crm"/>
+            <column name="code" value="READ_CRM_COMPLAINT"/>
+            <column name="action_name" value="READ"/>
+            <column name="entity_name" value="CRM_COMPLAINT"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="crm"/>
+            <column name="code" value="CREATE_CRM_COMPLAINT"/>
+            <column name="action_name" value="CREATE"/>
+            <column name="entity_name" value="CRM_COMPLAINT"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="crm"/>
+            <column name="code" value="READ_CRM_360"/>
+            <column name="action_name" value="READ"/>
+            <column name="entity_name" value="CRM_360"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

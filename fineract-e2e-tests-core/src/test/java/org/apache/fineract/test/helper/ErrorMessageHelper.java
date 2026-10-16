@@ -681,6 +681,11 @@ public final class ErrorMessageHelper {
         return String.format("List of locked loan accounts contains the loan with loanId %s. List of locked loans: %n%s", loanId, bodyStr);
     }
 
+    public static String expectedLoanToRemainLocked(Long loanId, LoanAccountLockResponseDTO response) {
+        String bodyStr = response.toString();
+        return String.format("Expected loan %s to remain locked after COB but it is not present in the lock list: %n%s", loanId, bodyStr);
+    }
+
     public static String wrongValueInLineDelinquencyActions(int line, List<String> actual, List<String> expected) {
         String lineStr = String.valueOf(line);
         String expectedStr = expected.toString();
@@ -1037,12 +1042,16 @@ public final class ErrorMessageHelper {
     }
 
     public static String paymentAllocationRulesInvalidNumberFailure(int actualNumberOfPaymentAllocationRules) {
-        return String.format("Each provided payment allocation must contain exactly 3 allocation rules, but %d were provided",
+        return String.format("Each provided payment allocation must contain exactly 6 allocation rules, but %d were provided",
                 actualNumberOfPaymentAllocationRules);
     }
 
     public static String paymentAllocationRulesInvalidValueFailure() {
         return "One or more payment allocation types are invalid or not recognized";
+    }
+
+    public static String paymentAllocationRulesDuplicateFailure() {
+        return "The list of provided payment allocation rules must not contain any duplicates";
     }
 
     public static String workingCapitalLoanProductIdentifiedDoesNotExistFailure(String identifierId) {
@@ -1093,12 +1102,8 @@ public final class ErrorMessageHelper {
         return String.format("Transition LOAN_DISBURSAL_UNDO is not allowed from status %s", status);
     }
 
-    public static String discountAmountExceedFailure() {
-        return "Failed data validation due to: amount.cannot.exceed.created.discount.";
-    }
-
-    public static String discountAmountExceedApprovedFailure() {
-        return "Failed data validation due to: amount.cannot.exceed.approved.discount.";
+    public static String overrideDisallowedByProductFailure() {
+        return "Failed data validation due to: override.not.allowed.by.product.";
     }
 
     public static String discountAlreadySetBeforeDisburseFailure() {
@@ -1109,20 +1114,36 @@ public final class ErrorMessageHelper {
         return "Failed data validation due to: transaction.date.must.be.equal.disbursement.date.";
     }
 
-    public static String overrideDisallowedByProductFailure() {
-        return "Failed data validation due to: override.not.allowed.by.product.";
+    public static String discountAdjustmentExceedFailure() {
+        return "Failed data validation due to: cannot.be.more.than.discount.fee.";
     }
 
-    public static String discountExceedCreatedDiscountFailure() {
-        return "Failed data validation due to: amount.cannot.exceed.created.discount.";
+    public static String discountAdjustmentBackdatedFailure() {
+        return "Failed data validation due to: backdated.not.allowed.";
     }
 
-    public static String discountExceedProductDiscountFailure() {
-        return "Failed data validation due to: amount.cannot.exceed.product.discount.";
+    public static String discountAdjustmentBeforeDiscountDateFailure() {
+        return "Failed data validation due to: cannot.be.before.discount.fee.date.";
+    }
+
+    public static String discountAdjustmentFutureDateFailure() {
+        return "Failed data validation due to: cannot.be.a.future.date.";
+    }
+
+    public static String discountAdjustmentZeroAmountFailure() {
+        return "The parameter `transactionAmount` must be greater than 0.";
+    }
+
+    public static String discountAdjustmentNotActiveLoanFailure() {
+        return "Failed data validation due to: adjustment.only.allowed.for.active.loan.";
     }
 
     public static String nearBreachCannotEnableWithoutBreachFailure() {
         return "Failed data validation due to: cannot.enable.near.breach.without.breach.";
+    }
+
+    public static String discountExceedProductDiscountFailure() {
+        return "Failed data validation due to: amount.cannot.exceed.product.discount.";
     }
 
     public static String nearBreachMustBeLowerThenBreachFailure() {
@@ -1131,5 +1152,9 @@ public final class ErrorMessageHelper {
 
     public static String nearBreachIdNotFoundFailure(long nearBreachId) {
         return String.format("Working Capital Near Breach with id %s was not found.", nearBreachId);
+    }
+
+    public static String periodPaymentRateOnNonActiveLoanFailure() {
+        return "rate.change.not.allowed.for.non.active.loan";
     }
 }

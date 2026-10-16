@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+
+    <!--
+        SF-01-06 : Table des revues KYC périodiques (LBC/FT).
+        Une revue est déclenchée manuellement ou automatiquement selon le niveau de risque.
+
+        Fréquences recommandées :
+          - Risque FAIBLE  (1) : revue annuelle
+          - Risque MOYEN   (2) : revue semestrielle
+          - Risque ÉLEVÉ   (3) : revue trimestrielle
+
+        risk_level_enum : 1=FAIBLE, 2=MOYEN, 3=ELEVE
+        status_enum     : 0=EN_COURS, 1=VALIDEE, 2=REJETEE, 3=EN_ATTENTE
+    -->
+    <changeSet id="0257-1" author="fineract-crm">
+        <createTable tableName="crm_kyc_review">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="prospect_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <!-- Niveau de risque LBC/FT évalué lors de cette revue -->
+            <column name="risk_level_enum" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Statut de la revue -->
+            <column name="status_enum" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Date de la revue -->
+            <column name="review_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Prochaine revue planifiée (calculée selon le niveau de risque) -->
+            <column name="next_review_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <!-- Agent ayant réalisé la revue -->
+            <column name="reviewed_by_user_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <!-- Commentaires / justification -->
+            <column name="review_notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <!-- Source : 0=MANUELLE, 1=AUTOMATIQUE (job) -->
+            <column name="trigger_enum" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lastmodified_date" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0257-2" author="fineract-crm">
+        <createIndex indexName="idx_crm_kyc_review_prospect" tableName="crm_kyc_review">
+            <column name="prospect_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0257-3" author="fineract-crm">
+        <createIndex indexName="idx_crm_kyc_review_client" tableName="crm_kyc_review">
+            <column name="client_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Index sur next_review_date pour le job de planification -->
+    <changeSet id="0257-4" author="fineract-crm">
+        <createIndex indexName="idx_crm_kyc_review_next_date" tableName="crm_kyc_review">
+            <column name="next_review_date"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Ajouter risk_level_enum sur crm_prospect pour le niveau de risque global -->
+    <changeSet id="0257-5" author="fineract-crm">
+        <addColumn tableName="crm_prospect">
+            <column name="risk_level_enum" type="INT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_kyc_review_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="next_kyc_review_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Permissions -->
+    <changeSet id="0257-6" author="fineract-crm">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="READ_CRM_KYC_REVIEW"/>
+            <column name="entity_name" value="CRM_KYC_REVIEW"/>
+            <column name="action_name" value="READ"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="CREATE_CRM_KYC_REVIEW"/>
+            <column name="entity_name" value="CRM_KYC_REVIEW"/>
+            <column name="action_name" value="CREATE"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="UPDATE_CRM_KYC_REVIEW"/>
+            <column name="entity_name" value="CRM_KYC_REVIEW"/>
+            <column name="action_name" value="UPDATE"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

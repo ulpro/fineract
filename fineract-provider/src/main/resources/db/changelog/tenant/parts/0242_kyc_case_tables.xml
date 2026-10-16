@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet author="fineract" id="0240-kyc-case-tables">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="m_kyc_case"/>
+            </not>
+        </preConditions>
+        
+        <createTable tableName="m_kyc_case">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kyc_tier_id" type="BIGINT"/>
+            <column name="workflow_status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assigned_agent_id" type="BIGINT"/>
+            <column name="assigned_date" type="DATETIME"/>
+            <column name="assignment_status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="risk_level_enum" type="INT"/>
+            <column name="risk_score" type="DECIMAL(5, 2)"/>
+            <column name="risk_reason" type="TEXT"/>
+            <column name="risk_flags" type="TEXT"/>
+            <column name="escalation_reason" type="VARCHAR(500)"/>
+            <column name="compliance_notes" type="TEXT"/>
+            <column name="createdby_id" type="BIGINT"/>
+            <column name="created_date" type="DATETIME"/>
+            <column name="lastmodifiedby_id" type="BIGINT"/>
+            <column name="lastmodified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="m_kyc_case"
+            baseColumnNames="client_id"
+            constraintName="fk_kyc_case_client"
+            referencedTableName="m_client"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="m_kyc_case"
+            baseColumnNames="kyc_tier_id"
+            constraintName="fk_kyc_case_tier"
+            referencedTableName="m_kyc_tier"
+            referencedColumnNames="id"/>
+
+        <createTable tableName="m_kyc_case_history">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="kyc_case_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_status_enum" type="INT"/>
+            <column name="to_status_enum" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_assignment_status_enum" type="INT"/>
+            <column name="to_assignment_status_enum" type="INT"/>
+            <column name="comments" type="TEXT"/>
+            <column name="actor_id" type="BIGINT"/>
+            <column name="created_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="m_kyc_case_history"
+            baseColumnNames="kyc_case_id"
+            constraintName="fk_kyc_case_history_case"
+            referencedTableName="m_kyc_case"
+            referencedColumnNames="id"/>
+
+        <createTable tableName="m_kyc_audit_log">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="kyc_case_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_id" type="BIGINT"/>
+            <column name="action" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="field_name" type="VARCHAR(100)"/>
+            <column name="old_value" type="TEXT"/>
+            <column name="new_value" type="TEXT"/>
+            <column name="comments" type="TEXT"/>
+            <column name="actor_id" type="BIGINT"/>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="created_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="m_kyc_audit_log"
+            baseColumnNames="kyc_case_id"
+            constraintName="fk_kyc_audit_log_case"
+            referencedTableName="m_kyc_case"
+            referencedColumnNames="id"/>
+
+    </changeSet>
+
+</databaseChangeLog>

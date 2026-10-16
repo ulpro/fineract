@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet author="fineract" id="0238-kyc-fix-audit-columns">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="m_kyc_document_type"/>
+        </preConditions>
+        <renameColumn tableName="m_kyc_document_type" oldColumnName="created_by" newColumnName="createdby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_document_type" oldColumnName="last_modified_by" newColumnName="lastmodifiedby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_document_type" oldColumnName="last_modified_date" newColumnName="lastmodified_date" columnDataType="DATETIME"/>
+
+        <renameColumn tableName="m_kyc_tier" oldColumnName="created_by" newColumnName="createdby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_tier" oldColumnName="last_modified_by" newColumnName="lastmodifiedby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_tier" oldColumnName="last_modified_date" newColumnName="lastmodified_date" columnDataType="DATETIME"/>
+
+        <renameColumn tableName="m_kyc_document" oldColumnName="created_by" newColumnName="createdby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_document" oldColumnName="last_modified_by" newColumnName="lastmodifiedby_id" columnDataType="BIGINT"/>
+        <renameColumn tableName="m_kyc_document" oldColumnName="last_modified_date" newColumnName="lastmodified_date" columnDataType="DATETIME"/>
+    </changeSet>
+
+</databaseChangeLog>

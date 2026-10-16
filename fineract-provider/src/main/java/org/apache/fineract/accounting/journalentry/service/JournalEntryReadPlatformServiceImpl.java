@@ -194,7 +194,7 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
                     final String receiptNumber = rs.getString("receiptNumber");
                     final String bankNumber = rs.getString("bankNumber");
                     paymentDetailData = new PaymentDetailData(id, paymentType, accountNumber, checkNumber, routingCode, receiptNumber,
-                            bankNumber);
+                            bankNumber, null, null, null, null, null, null);
                 }
                 NoteData noteData = null;
                 final Long noteId = JdbcSupport.getLong(rs, "noteId");

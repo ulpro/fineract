@@ -115,6 +115,8 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
 
     private List<DatatableData> datatables;
 
+    private Long kycTierId;
+
     // import fields
     private transient Integer rowIndex;
     private String dateFormat;

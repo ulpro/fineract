@@ -88,6 +88,18 @@
         <class>org.apache.fineract.useradministration.domain.Permission</class>
         <class>org.apache.fineract.useradministration.domain.Role</class>
 
+        <!--  fineract-kyc module: -->
+        <class>org.apache.fineract.kyc.domain.KycAuditLog</class>
+        <class>org.apache.fineract.kyc.domain.KycCase</class>
+        <class>org.apache.fineract.kyc.domain.KycCaseFlag</class>
+        <class>org.apache.fineract.kyc.domain.KycCaseHistory</class>
+        <class>org.apache.fineract.kyc.domain.KycDocument</class>
+        <class>org.apache.fineract.kyc.domain.KycDocumentType</class>
+        <class>org.apache.fineract.kyc.domain.KycFlagType</class>
+        <class>org.apache.fineract.kyc.domain.KycTier</class>
+        <class>org.apache.fineract.kyc.domain.KycTierDocumentRequirement</class>
+        <class>org.apache.fineract.kyc.domain.KycTierRequiredField</class>
+
         <!--  fineract-loan module: -->
         <class>org.apache.fineract.portfolio.collateral.domain.LoanCollateral</class>
         <class>org.apache.fineract.portfolio.collateralmanagement.domain.ClientCollateralManagement</class>
@@ -173,6 +185,7 @@
         <class>org.apache.fineract.portfolio.workingcapitalloan.domain.WorkingCapitalLoanTransaction</class>
         <class>org.apache.fineract.portfolio.workingcapitalloan.domain.WorkingCapitalLoanTransactionAllocation</class>
         <class>org.apache.fineract.portfolio.workingcapitalloannearbreach.domain.WorkingCapitalNearBreach</class>
+        <class>org.apache.fineract.portfolio.workingcapitalloan.domain.WorkingCapitalLoanPeriodPaymentRateChange</class>
         <class>org.apache.fineract.portfolio.workingcapitalloanproduct.domain.WorkingCapitalLoanProduct</class>
         <class>org.apache.fineract.portfolio.workingcapitalloanproduct.domain.WorkingCapitalLoanProductConfigurableAttributes</class>
         <class>org.apache.fineract.portfolio.workingcapitalloanproduct.domain.WorkingCapitalLoanProductPaymentAllocationRule</class>

@@ -28,6 +28,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -39,6 +40,7 @@ import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableCustom;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
+import org.apache.fineract.kyc.domain.KycTier;
 import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.shareproducts.data.ShareProductMarketPriceData;
@@ -120,6 +122,18 @@ public class ShareProduct extends AbstractAuditableCustom {
 
     @Column(name = "accounting_type", nullable = false)
     protected Integer accountingRule;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kyc_tier_id", nullable = true)
+    private KycTier kycTier;
+
+    public KycTier getKycTier() {
+        return this.kycTier;
+    }
+
+    public void setKycTier(final KycTier kycTier) {
+        this.kycTier = kycTier;
+    }
 
     protected ShareProduct() {
 

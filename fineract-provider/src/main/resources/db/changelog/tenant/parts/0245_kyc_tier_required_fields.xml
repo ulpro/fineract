@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet author="fineract" id="0243-kyc-tier-add-client-type">
+        <addColumn tableName="m_kyc_tier">
+            <column name="client_type_cv_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet author="fineract" id="0243-kyc-tier-required-field-table">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="m_kyc_tier_required_field"/>
+            </not>
+        </preConditions>
+        <createTable tableName="m_kyc_tier_required_field">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="kyc_tier_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="field_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="m_kyc_tier_required_field"
+            baseColumnNames="kyc_tier_id"
+            constraintName="fk_kyc_tier_req_field_tier"
+            referencedTableName="m_kyc_tier"
+            referencedColumnNames="id"/>
+        <addUniqueConstraint
+            tableName="m_kyc_tier_required_field"
+            columnNames="kyc_tier_id, field_name"
+            constraintName="uq_kyc_tier_req_field"/>
+    </changeSet>
+
+</databaseChangeLog>

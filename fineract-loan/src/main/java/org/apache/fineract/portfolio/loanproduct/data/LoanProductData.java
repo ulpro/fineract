@@ -35,6 +35,7 @@ import org.apache.fineract.accounting.producttoaccountmapping.data.ChargeToGLAcc
 import org.apache.fineract.accounting.producttoaccountmapping.data.ClassificationToGLAccountData;
 import org.apache.fineract.accounting.producttoaccountmapping.data.PaymentTypeToGLAccountMapper;
 import org.apache.fineract.infrastructure.codes.data.CodeValueData;
+import org.apache.fineract.kyc.data.KycTierData;
 import org.apache.fineract.infrastructure.core.api.ApiFacingEnum;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.data.StringEnumOptionData;
@@ -268,6 +269,18 @@ public class LoanProductData implements Serializable {
     private final List<CodeValueData> buydownFeeClassificationOptions;
     private List<ClassificationToGLAccountData> capitalizedIncomeClassificationToIncomeAccountMappings;
     private List<ClassificationToGLAccountData> buydownFeeClassificationToIncomeAccountMappings;
+    private KycTierData kycTier;
+    private Collection<KycTierData> kycTierOptions;
+
+    public LoanProductData withKycTier(final KycTierData kycTier) {
+        this.kycTier = kycTier;
+        return this;
+    }
+
+    public LoanProductData withKycTierOptions(final Collection<KycTierData> kycTierOptions) {
+        this.kycTierOptions = kycTierOptions;
+        return this;
+    }
 
     /**
      * Used when returning lookup information about loan product for dropdowns.
@@ -1294,6 +1307,7 @@ public class LoanProductData implements Serializable {
         this.buydownFeeClassificationOptions = buydownFeeClassificationOptions;
         this.buydownFeeClassificationToIncomeAccountMappings = productData.buydownFeeClassificationToIncomeAccountMappings;
         this.capitalizedIncomeClassificationToIncomeAccountMappings = productData.capitalizedIncomeClassificationToIncomeAccountMappings;
+        this.kycTier = productData.kycTier;
     }
 
     private Collection<ChargeData> nullIfEmpty(final Collection<ChargeData> charges) {

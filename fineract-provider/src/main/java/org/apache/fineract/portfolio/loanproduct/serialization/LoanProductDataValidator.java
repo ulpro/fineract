@@ -209,7 +209,8 @@ public final class LoanProductDataValidator {
             LoanProductConstants.MERCHANT_BUY_DOWN_FEE_PARAM_NAME,
             LoanProductAccountingParams.CAPITALIZED_INCOME_CLASSIFICATION_TO_INCOME_ACCOUNT_MAPPINGS.getValue(), //
             LoanProductAccountingParams.BUYDOWN_FEE_CLASSIFICATION_TO_INCOME_ACCOUNT_MAPPINGS.getValue(), //
-            LoanProductConstants.ALLOW_FULL_TERM_FOR_TRANCHE_PARAM_NAME //
+            LoanProductConstants.ALLOW_FULL_TERM_FOR_TRANCHE_PARAM_NAME, //
+            "kycTierId" //
     ));
 
     private static final String[] SUPPORTED_LOAN_CONFIGURABLE_ATTRIBUTES = { LoanProductConstants.amortizationTypeParamName,
@@ -255,6 +256,11 @@ public final class LoanProductDataValidator {
         if (this.fromApiJsonHelper.parameterExists(FUND_ID, element)) {
             final Long fundId = this.fromApiJsonHelper.extractLongNamed(FUND_ID, element);
             baseDataValidator.reset().parameter(FUND_ID).value(fundId).ignoreIfNull().integerGreaterThanZero();
+        }
+
+        if (this.fromApiJsonHelper.parameterExists("kycTierId", element)) {
+            final Long kycTierId = this.fromApiJsonHelper.extractLongNamed("kycTierId", element);
+            baseDataValidator.reset().parameter("kycTierId").value(kycTierId).ignoreIfNull().integerGreaterThanZero();
         }
 
         boolean isEqualAmortization = false;

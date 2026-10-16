@@ -74,6 +74,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+
 @Service
 public class ShareAccountDataSerializer {
 
@@ -92,6 +94,8 @@ public class ShareAccountDataSerializer {
     private final ShareProductRepositoryWrapper shareProductRepository;
 
     private final SavingsAccountReadPlatformService savingsAccountReadPlatformService;
+
+    private final KycTierRepositoryWrapper kycTierRepositoryWrapper;
 
     private static final Set<String> approvalParameters = new HashSet<>(
             Arrays.asList(ShareAccountApiConstants.locale_paramname, ShareAccountApiConstants.dateformat_paramname,
@@ -112,7 +116,8 @@ public class ShareAccountDataSerializer {
     public ShareAccountDataSerializer(final PlatformSecurityContext platformSecurityContext, final FromJsonHelper fromApiJsonHelper,
             final ChargeRepositoryWrapper chargeRepository, final SavingsAccountRepositoryWrapper savingsAccountRepositoryWrapper,
             final ClientRepositoryWrapper clientRepositoryWrapper, final ShareProductRepositoryWrapper shareProductRepository,
-            final SavingsAccountReadPlatformService savingsAccountReadPlatformService) {
+            final SavingsAccountReadPlatformService savingsAccountReadPlatformService,
+            final KycTierRepositoryWrapper kycTierRepositoryWrapper) {
         this.platformSecurityContext = platformSecurityContext;
         this.fromApiJsonHelper = fromApiJsonHelper;
         this.chargeRepository = chargeRepository;
@@ -120,6 +125,7 @@ public class ShareAccountDataSerializer {
         this.clientRepositoryWrapper = clientRepositoryWrapper;
         this.shareProductRepository = shareProductRepository;
         this.savingsAccountReadPlatformService = savingsAccountReadPlatformService;
+        this.kycTierRepositoryWrapper = kycTierRepositoryWrapper;
     }
 
     public ShareAccount validateAndCreate(JsonCommand jsonCommand) {
@@ -190,6 +196,7 @@ public class ShareAccountDataSerializer {
         }
 
         Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+        validateClientKycTierForProduct(client, shareProduct);
         if (!this.savingsAccountReadPlatformService.isAccountBelongsToClient(clientId, savingsAccountId, DepositAccountType.SAVINGS_DEPOSIT,
                 shareProduct.getCurrency().getCode())) {
             throw new SavingsAccountNotFoundException(savingsAccountId);
@@ -284,6 +291,7 @@ public class ShareAccountDataSerializer {
                 actualChanges.put(ShareAccountApiConstants.productid_paramname, productId);
             }
         }
+        validateClientKycTierForProduct(account.getClient(), shareProduct);
 
         if (this.fromApiJsonHelper.parameterExists(ShareAccountApiConstants.submitteddate_paramname, element)) {
             final LocalDate submittedDate = this.fromApiJsonHelper.extractLocalDateNamed(ShareAccountApiConstants.submitteddate_paramname,
@@ -467,6 +475,7 @@ public class ShareAccountDataSerializer {
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("sharesaccount");
         JsonElement element = jsonCommand.parsedJson();
+        validateClientKycTierForProduct(account.getClient(), account.getShareProduct());
         if (!account.status().equals(ShareAccountStatusType.SUBMITTED_AND_PENDING_APPROVAL.getValue())) {
             baseDataValidator.failWithCodeNoParameterAddedToErrorCode("is.not.pending.for.approval");
         }
@@ -1042,5 +1051,27 @@ public class ShareAccountDataSerializer {
         handleRedeemSharesChargeTransactions(account, transaction);
         actualChanges.put(ShareAccountApiConstants.requestedshares_paramname, transaction);
         return actualChanges;
+    }
+
+    private void validateClientKycTierForProduct(final Client client, final ShareProduct shareProduct) {
+        if (shareProduct != null && shareProduct.getKycTier() != null) {
+            if (client == null || client.getKycTierId() == null) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("sharesaccount");
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.required.for.product",
+                        "Client does not have a KYC tier required for this product: " + shareProduct.getKycTier().getName());
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+            final org.apache.fineract.kyc.domain.KycTier clientKycTier = this.kycTierRepositoryWrapper
+                    .findOneWithNotFoundDetection(client.getKycTierId());
+            if (clientKycTier.getLevel() < shareProduct.getKycTier().getLevel()) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("sharesaccount");
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.insufficient.for.product",
+                        "Client KYC tier level (" + clientKycTier.getLevel() + ") is lower than product required KYC tier level ("
+                                + shareProduct.getKycTier().getLevel() + ")");
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+        }
     }
 }

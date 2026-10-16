@@ -84,6 +84,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+import org.apache.fineract.infrastructure.core.data.ApiParameterError;
+import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
+import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
+
 @Service
 public class SavingsAccountAssembler {
 
@@ -101,6 +106,7 @@ public class SavingsAccountAssembler {
     private final JdbcTemplate jdbcTemplate;
     private final ConfigurationDomainService configurationDomainService;
     private final ExternalIdFactory externalIdFactory;
+    private final KycTierRepositoryWrapper kycTierRepositoryWrapper;
 
     @Autowired
     public SavingsAccountAssembler(final SavingsAccountTransactionSummaryWrapper savingsAccountTransactionSummaryWrapper,
@@ -110,7 +116,8 @@ public class SavingsAccountAssembler {
             final SavingsAccountRepositoryWrapper savingsAccountRepository,
             final SavingsAccountChargeAssembler savingsAccountChargeAssembler, final FromJsonHelper fromApiJsonHelper,
             final AccountTransfersReadPlatformService accountTransfersReadPlatformService, final JdbcTemplate jdbcTemplate,
-            final ConfigurationDomainService configurationDomainService, ExternalIdFactory externalIdFactory) {
+            final ConfigurationDomainService configurationDomainService, ExternalIdFactory externalIdFactory,
+            final KycTierRepositoryWrapper kycTierRepositoryWrapper) {
         this.savingsAccountTransactionSummaryWrapper = savingsAccountTransactionSummaryWrapper;
         this.savingsAccountTransactionDataSummaryWrapper = savingsAccountTransactionDataSummaryWrapper;
         this.clientRepository = clientRepository;
@@ -124,6 +131,7 @@ public class SavingsAccountAssembler {
         this.jdbcTemplate = jdbcTemplate;
         this.configurationDomainService = configurationDomainService;
         this.externalIdFactory = externalIdFactory;
+        this.kycTierRepositoryWrapper = kycTierRepositoryWrapper;
     }
 
     /**
@@ -179,6 +187,8 @@ public class SavingsAccountAssembler {
                 accountType = AccountType.GSIM;
             }
         }
+
+        validateClientKycTierForProduct(client, product);
 
         final Long fieldOfficerId = this.fromApiJsonHelper.extractLongNamed(fieldOfficerIdParamName, element);
         if (fieldOfficerId != null) {
@@ -456,6 +466,7 @@ public class SavingsAccountAssembler {
             accountType = AccountType.JLG;
         }
         final SavingsProduct product = this.savingProductRepository.findById(productId).orElseThrow();
+        validateClientKycTierForProduct(client, product);
         final Set<SavingsAccountCharge> charges = this.savingsAccountChargeAssembler.fromSavingsProduct(product);
         final SavingsAccount account = SavingsAccount.createNewApplicationForSubmittal(client, group, product, null, null, null,
                 accountType, appliedonDate, appliedBy, product.nominalAnnualInterestRate(), product.interestCompoundingPeriodType(),
@@ -480,5 +491,27 @@ public class SavingsAccountAssembler {
 
     public void assignSavingAccountHelpers(final SavingsAccountData savingsAccountData) {
         savingsAccountData.setHelpers(this.savingsAccountTransactionDataSummaryWrapper, this.savingsHelper);
+    }
+
+    public void validateClientKycTierForProduct(final Client client, final SavingsProduct product) {
+        if (product != null && product.getKycTier() != null) {
+            if (client == null || client.getKycTierId() == null) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource(SAVINGS_ACCOUNT_RESOURCE_NAME);
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.required.for.product",
+                        "Client does not have a KYC tier required for this product: " + product.getKycTier().getName());
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+            final org.apache.fineract.kyc.domain.KycTier clientKycTier = this.kycTierRepositoryWrapper
+                    .findOneWithNotFoundDetection(client.getKycTierId());
+            if (clientKycTier.getLevel() < product.getKycTier().getLevel()) {
+                final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+                final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource(SAVINGS_ACCOUNT_RESOURCE_NAME);
+                baseDataValidator.reset().parameter("kycTier").failWithCode("client.kyc.tier.insufficient.for.product",
+                        "Client KYC tier level (" + clientKycTier.getLevel() + ") is lower than product required KYC tier level ("
+                                + product.getKycTier().getLevel() + ")");
+                throw new PlatformApiDataValidationException(dataValidationErrors);
+            }
+        }
     }
 }

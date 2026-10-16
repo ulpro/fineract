@@ -68,6 +68,7 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeTyp
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleProcessingType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
+import org.apache.fineract.kyc.domain.KycTier;
 import org.apache.fineract.portfolio.loanproduct.LoanProductConstants;
 import org.apache.fineract.portfolio.loanproduct.exception.LoanProductGeneralRuleException;
 import org.apache.fineract.portfolio.rate.domain.Rate;
@@ -230,6 +231,10 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
 
     @Column(name = "repayment_start_date_type_enum", nullable = false)
     private RepaymentStartDateType repaymentStartDateType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kyc_tier_id", nullable = true)
+    private KycTier kycTier;
 
     public void updateLoanProductInRelatedClasses() {
         if (this.isInterestRecalculationEnabled()) {

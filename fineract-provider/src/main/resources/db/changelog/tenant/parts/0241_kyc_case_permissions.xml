@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet author="fineract" id="0239-kyc-case-permissions">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="m_permission"/>
+        </preConditions>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="CREATE_KYCCASE"/>
+            <column name="entity_name" value="KYCCASE"/>
+            <column name="action_name" value="CREATE"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="TRANSITION_KYCCASE"/>
+            <column name="entity_name" value="KYCCASE"/>
+            <column name="action_name" value="TRANSITION"/>
+            <column name="can_maker_checker" valueBoolean="true"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="ASSIGN_KYCCASE"/>
+            <column name="entity_name" value="KYCCASE"/>
+            <column name="action_name" value="ASSIGN"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="UPDATERISK_KYCCASE"/>
+            <column name="entity_name" value="KYCCASE"/>
+            <column name="action_name" value="UPDATERISK"/>
+            <column name="can_maker_checker" valueBoolean="true"/>
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio"/>
+            <column name="code" value="READ_KYCCASE"/>
+            <column name="entity_name" value="KYCCASE"/>
+            <column name="action_name" value="READ"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- Auto-assign all KYC permissions (cases + documents) to Super User role (id=1) -->
+    <changeSet author="fineract" id="0239-kyc-assign-permissions-to-super-user">
+        <sql>
+            INSERT INTO m_role_permission (role_id, permission_id)
+            SELECT 1, p.id FROM m_permission p
+            WHERE p.code IN (
+                'CREATE_KYCCASE', 'TRANSITION_KYCCASE', 'ASSIGN_KYCCASE', 'UPDATERISK_KYCCASE', 'READ_KYCCASE',
+                'CREATE_KYCDOCUMENT', 'READ_KYCDOCUMENT', 'SUBMIT_KYCDOCUMENT', 'APPROVE_KYCDOCUMENT', 'REJECT_KYCDOCUMENT',
+                'CREATE_KYCDOCUMENTTYPE', 'READ_KYCDOCUMENTTYPE',
+                'CREATE_KYCTIER', 'UPDATE_KYCTIER', 'READ_KYCTIER'
+            )
+            AND NOT EXISTS (SELECT 1 FROM m_role_permission rp WHERE rp.role_id = 1 AND rp.permission_id = p.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

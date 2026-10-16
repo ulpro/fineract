@@ -55,6 +55,8 @@ import org.apache.fineract.portfolio.shareproducts.domain.ShareProductMarketPric
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.apache.fineract.kyc.domain.KycTierRepositoryWrapper;
+
 @Service
 public class ShareProductDataSerializer {
 
@@ -74,20 +76,22 @@ public class ShareProductDataSerializer {
             ShareProductApiConstants.accountingRuleParamName, AccountingConstants.SharesProductAccountingParams.INCOME_FROM_FEES.getValue(),
             AccountingConstants.SharesProductAccountingParams.SHARES_EQUITY.getValue(),
             AccountingConstants.SharesProductAccountingParams.SHARES_REFERENCE.getValue(),
-            AccountingConstants.SharesProductAccountingParams.SHARES_SUSPENSE.getValue()));
+            AccountingConstants.SharesProductAccountingParams.SHARES_SUSPENSE.getValue(), "kycTierId"));
     private static final Set<String> supportedParametersForDivident = new HashSet<>(Arrays.asList(ShareProductApiConstants.locale_paramname,
             ShareProductApiConstants.dateFormatParamName, ShareProductApiConstants.dividendPeriodStartDateParamName,
             ShareProductApiConstants.dividendPeriodEndDateParamName, ShareProductApiConstants.dividendAmountParamName));
     private final FromJsonHelper fromApiJsonHelper;
     private final ChargeRepositoryWrapper chargeRepository;
     private final PlatformSecurityContext platformSecurityContext;
+    private final KycTierRepositoryWrapper kycTierRepositoryWrapper;
 
     @Autowired
     public ShareProductDataSerializer(final FromJsonHelper fromApiJsonHelper, final ChargeRepositoryWrapper chargeRepository,
-            final PlatformSecurityContext platformSecurityContext) {
+            final PlatformSecurityContext platformSecurityContext, final KycTierRepositoryWrapper kycTierRepositoryWrapper) {
         this.fromApiJsonHelper = fromApiJsonHelper;
         this.chargeRepository = chargeRepository;
         this.platformSecurityContext = platformSecurityContext;
+        this.kycTierRepositoryWrapper = kycTierRepositoryWrapper;
     }
 
     public ShareProduct validateAndCreate(JsonCommand jsonCommand) {
@@ -189,6 +193,15 @@ public class ShareProductDataSerializer {
         for (ShareProductMarketPrice data : marketPriceSet) {
             data.setShareProduct(product);
         }
+
+        if (this.fromApiJsonHelper.parameterExists("kycTierId", element)) {
+            final Long kycTierId = this.fromApiJsonHelper.extractLongNamed("kycTierId", element);
+            baseDataValidator.reset().parameter("kycTierId").value(kycTierId).ignoreIfNull().longGreaterThanZero();
+            if (kycTierId != null) {
+                product.setKycTier(this.kycTierRepositoryWrapper.findOneWithNotFoundDetection(kycTierId));
+            }
+        }
+
         if (!dataValidationErrors.isEmpty()) {
             throw new PlatformApiDataValidationException(dataValidationErrors);
         }
@@ -446,6 +459,17 @@ public class ShareProductDataSerializer {
             if (product.setLockPeriodFrequencyType(lockPeriod)) {
                 actualChanges.put(ShareProductApiConstants.lockinperiodfrequencytype_paramname, lockPeriod);
             }
+        }
+
+        if (this.fromApiJsonHelper.parameterExists("kycTierId", element)) {
+            final Long kycTierId = this.fromApiJsonHelper.extractLongNamed("kycTierId", element);
+            baseDataValidator.reset().parameter("kycTierId").value(kycTierId).ignoreIfNull().longGreaterThanZero();
+            if (kycTierId != null) {
+                product.setKycTier(this.kycTierRepositoryWrapper.findOneWithNotFoundDetection(kycTierId));
+            } else {
+                product.setKycTier(null);
+            }
+            actualChanges.put("kycTierId", kycTierId);
         }
 
         if (!dataValidationErrors.isEmpty()) {

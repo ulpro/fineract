@@ -85,6 +85,7 @@ import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.interestratechart.domain.InterestRateChart;
+import org.apache.fineract.kyc.domain.KycTier;
 import org.apache.fineract.portfolio.savings.SavingsCompoundingInterestPeriodType;
 import org.apache.fineract.portfolio.savings.SavingsInterestCalculationDaysInYearType;
 import org.apache.fineract.portfolio.savings.SavingsInterestCalculationType;
@@ -208,6 +209,18 @@ public class SavingsProduct extends AbstractPersistableCustom<Long> {
 
     @Column(name = "days_to_escheat")
     private Long daysToEscheat;
+
+    @ManyToOne
+    @JoinColumn(name = "kyc_tier_id", nullable = true)
+    private KycTier kycTier;
+
+    public KycTier getKycTier() {
+        return this.kycTier;
+    }
+
+    public void setKycTier(final KycTier kycTier) {
+        this.kycTier = kycTier;
+    }
 
     public static SavingsProduct createNew(final String name, final String shortName, final String description,
             final MonetaryCurrency currency, final BigDecimal interestRate,

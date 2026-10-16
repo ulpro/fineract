@@ -620,7 +620,8 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                             final String typeName = rs.getString("paymentTypeName");
                             final PaymentTypeData paymentTypeData = new PaymentTypeData(paymentTypeId, typeName, null, false, null, null,
                                     false);
-                            paymentDetailData = new PaymentDetailData(id, paymentTypeData, null, null, null, null, null);
+                            paymentDetailData = new PaymentDetailData(id, paymentTypeData, null, null, null, null, null,
+                                    null, null, null, null, null, null);
                         }
                     }
 
@@ -1124,6 +1125,9 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                     + "totran.description as toTransferDescription, sa.id as savingsId, sa.account_no as accountNo, "
                     + "pd.payment_type_id as paymentType,pd.account_number as accountNumber,pd.check_number as checkNumber, "
                     + "pd.receipt_number as receiptNumber, pd.bank_number as bankNumber,pd.routing_code as routingCode, "
+                    + "pd.depositor_name as depositor_name, pd.depositor_nationality as depositor_nationality, "
+                    + "pd.depositor_id_type as depositor_id_type, pd.depositor_id_number as depositor_id_number, "
+                    + "pd.depositor_id_issued_at as depositor_id_issued_at, pd.depositor_purpose as depositor_purpose, "
                     + "sa.currency_code as currencyCode, sa.currency_digits as currencyDigits, sa.currency_multiplesof as inMultiplesOf, "
                     + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, "
                     + "curr.display_symbol as currencyDisplaySymbol, pt.value as paymentTypeName, " + "tr.is_manual as postInterestAsOn ";
@@ -1185,8 +1189,15 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                     final String routingCode = rs.getString("routingCode");
                     final String receiptNumber = rs.getString("receiptNumber");
                     final String bankNumber = rs.getString("bankNumber");
+                    final String depositorName = rs.getString("depositor_name");
+                    final String depositorNationality = rs.getString("depositor_nationality");
+                    final String depositorIdType = rs.getString("depositor_id_type");
+                    final String depositorIdNumber = rs.getString("depositor_id_number");
+                    final String depositorIdIssuedAt = rs.getString("depositor_id_issued_at");
+                    final String depositorPurpose = rs.getString("depositor_purpose");
                     paymentDetailData = new PaymentDetailData(id, paymentType, accountNumber, checkNumber, routingCode, receiptNumber,
-                            bankNumber);
+                            bankNumber, depositorName, depositorNationality, depositorIdType, depositorIdNumber,
+                            depositorIdIssuedAt, depositorPurpose);
                 }
             }
 

@@ -252,4 +252,28 @@
     <include file="parts/0231_remove_clientcharge_inactivate_permissions.xml" relativeToChangelogFile="true" />
     <include file="parts/0232_add_repayment_start_date_to_loan.xml" relativeToChangelogFile="true" />
     <include file="parts/0233_backfill_repayment_start_date_type_on_loan.xml" relativeToChangelogFile="true" />
+    <include file="parts/0234_add_missing_processing_result_enum_values.xml" relativeToChangelogFile="true" />
+    <include file="parts/0235_transaction_summary_reports_buydown_fee_allocation.xml" relativeToChangelogFile="true" />
+    <include file="parts/0236_kyc_document_type.xml" relativeToChangelogFile="true" />
+    <include file="parts/0237_kyc_tier.xml" relativeToChangelogFile="true" />
+    <include file="parts/0238_kyc_document.xml" relativeToChangelogFile="true" />
+    <include file="parts/0239_kyc_document_workflow.xml" relativeToChangelogFile="true" />
+    <include file="parts/0240_kyc_fix_audit_columns.xml" relativeToChangelogFile="true" />
+    <include file="parts/0241_kyc_case_permissions.xml" relativeToChangelogFile="true" />
+    <include file="parts/0242_kyc_case_tables.xml" relativeToChangelogFile="true" />
+    <include file="parts/0243_add_client_kyc_tier.xml" relativeToChangelogFile="true" />
+    <include file="parts/0244_add_kyc_document_permissions.xml" relativeToChangelogFile="true" />
+    <include file="parts/0245_kyc_tier_required_fields.xml" relativeToChangelogFile="true" />
+    <include file="parts/0246_kyc_periodic_review.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0247_kyc_compliance_flags.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0248_ref_cobac_pcemf.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0249_sesame_views.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0250_add_product_kyc_tier.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0251_fix_client_collateral_product_permission.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0252_add_depositor_info_to_payment_detail.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0253_crm_schema_and_permissions.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0254_crm_prospect_enrich.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0255_crm_kyc_document.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0256_crm_kyc_expiration_job.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0257_crm_kyc_review.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

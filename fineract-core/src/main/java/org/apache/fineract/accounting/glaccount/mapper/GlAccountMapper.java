@@ -52,6 +52,8 @@ public interface GlAccountMapper {
     @Mapping(target = "allowedIncomeTagOptions", ignore = true)
     @Mapping(target = "allowedExpensesTagOptions", ignore = true)
     @Mapping(target = "organizationRunningBalance", ignore = true)
+    @Mapping(target = "cobacCode", ignore = true)
+    @Mapping(target = "cobacDescription", ignore = true)
     @Mapping(target = "rowIndex", ignore = true)
     GLAccountData map(GLAccount glAccount);
 

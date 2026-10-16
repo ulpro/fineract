@@ -1,0 +1,71 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+dependencies {
+    // Fineract dependencies
+    implementation(project(':fineract-core'))
+    implementation(project(':fineract-provider'))
+    implementation(project(':fineract-cob'))
+    implementation(project(':fineract-command'))
+    implementation(project(':fineract-loan'))
+    implementation(project(':fineract-savings'))
+    implementation(project(':fineract-document'))
+    implementation(project(':fineract-charge'))
+    implementation(project(':fineract-tax'))
+    implementation(project(':fineract-loan-origination'))
+    implementation(project(':fineract-command-audit'))
+    implementation(project(':fineract-command-jdbc'))
+    implementation(project(':fineract-validation'))
+    implementation(project(':fineract-investor'))
+    implementation(project(':fineract-rates'))
+    implementation(project(':fineract-report'))
+    implementation(project(':fineract-security'))
+    implementation(project(':fineract-mix'))
+    implementation(project(':fineract-working-capital-loan'))
+    implementation(project(':fineract-avro-schemas'))
+    implementation(project(':fineract-branch'))
+    implementation(project(':fineract-accounting'))
+    implementation(project(':fineract-progressive-loan'))
+
+    // Spring Boot & external libraries
+    implementation('org.springframework.boot:spring-boot-starter-actuator')
+    implementation('org.springframework.boot:spring-boot-starter-data-jpa')
+    implementation('org.springframework.boot:spring-boot-starter-web')
+    implementation('org.springframework.boot:spring-boot-starter-security')
+    implementation('jakarta.ws.rs:jakarta.ws.rs-api')
+    implementation('org.apache.commons:commons-lang3')
+    implementation('org.eclipse.persistence:org.eclipse.persistence.jpa')
+    implementation('org.glassfish.jersey.media:jersey-media-multipart')
+    implementation('io.swagger.core.v3:swagger-annotations-jakarta')
+    implementation('com.google.code.gson:gson')
+    implementation('com.google.truth:truth:1.4.5')
+
+    // Added MapStruct, Thymeleaf and Validation dependencies explicitly
+    implementation('jakarta.validation:jakarta.validation-api')
+    implementation('org.mapstruct:mapstruct')
+    implementation('org.thymeleaf:thymeleaf')
+    implementation('org.thymeleaf:thymeleaf-spring6')
+    implementation('org.liquibase:liquibase-core')
+    implementation('org.springframework.boot:spring-boot-starter-mail')
+    implementation('org.apache.commons:commons-text:1.12.0')
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.mapstruct:mapstruct-processor'
+}

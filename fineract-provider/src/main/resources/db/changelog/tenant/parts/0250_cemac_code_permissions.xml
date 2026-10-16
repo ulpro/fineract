@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="0250-cemac-code-permissions" author="antigravity">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="m_permission"/>
+        </preConditions>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="accounting"/>
+            <column name="code" value="READ_CEMACCODE"/>
+            <column name="entity_name" value="CEMACCODE"/>
+            <column name="action_name" value="READ"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="accounting"/>
+            <column name="code" value="CREATE_CEMACCODE"/>
+            <column name="entity_name" value="CEMACCODE"/>
+            <column name="action_name" value="CREATE"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="accounting"/>
+            <column name="code" value="DELETE_CEMACCODE"/>
+            <column name="entity_name" value="CEMACCODE"/>
+            <column name="action_name" value="DELETE"/>
+            <column name="can_maker_checker" valueBoolean="false"/>
+        </insert>
+
+        <!-- Give Super User role the permissions -->
+        <sql>
+            INSERT INTO m_role_permission(role_id, permission_id)
+            SELECT 1, p.id FROM m_permission p
+            WHERE p.code IN ('READ_CEMACCODE', 'CREATE_CEMACCODE', 'DELETE_CEMACCODE');
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

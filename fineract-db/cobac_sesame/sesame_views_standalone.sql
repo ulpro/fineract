@@ -1,0 +1,1220 @@
+-- =============================================================================
+-- SCRIPT SQL STANDALONE — Vues SESAME COBAC réelles adaptées (Collation-Safe)
+-- =============================================================================
+-- Fichier  : sesame_views_standalone.sql
+-- Version  : 3.0.1
+-- Date     : 2025-07
+-- Dépendance : ref_cobac_pcemf_standalone.sql doit être exécuté en premier
+-- =============================================================================
+
+-- =============================================================================
+-- 1. Balance COBAC — v_fm1000_balance
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1000_balance AS
+SELECT
+    r.cobac_code                                            AS code_poste,
+    r.libelle_cobac                                         AS libelle_compte,
+    -- Solde ouverture débiteur (période précédente)
+    0                                                       AS solde_ouverture_debiteur,
+    -- Solde ouverture créditeur (période précédente)  
+    0                                                       AS solde_ouverture_crediteur,
+    -- Mouvements débiteurs de la période
+    COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount ELSE 0 END), 0) AS mvt_periode_debiteur,
+    -- Mouvements créditeurs de la période
+    COALESCE(SUM(CASE WHEN j.type_enum = 1 THEN j.amount ELSE 0 END), 0) AS mvt_periode_crediteur,
+    -- Solde clôture débiteur
+    CASE 
+        WHEN COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount ELSE 0 END), 0)
+           > COALESCE(SUM(CASE WHEN j.type_enum = 1 THEN j.amount ELSE 0 END), 0)
+        THEN COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount ELSE 0 END), 0)
+           - COALESCE(SUM(CASE WHEN j.type_enum = 1 THEN j.amount ELSE 0 END), 0)
+        ELSE 0
+    END                                                     AS solde_cloture_debiteur,
+    -- Solde clôture créditeur
+    CASE 
+        WHEN COALESCE(SUM(CASE WHEN j.type_enum = 1 THEN j.amount ELSE 0 END), 0)
+           > COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount ELSE 0 END), 0)
+        THEN COALESCE(SUM(CASE WHEN j.type_enum = 1 THEN j.amount ELSE 0 END), 0)
+           - COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount ELSE 0 END), 0)
+        ELSE 0
+    END                                                     AS solde_cloture_crediteur
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+WHERE a.account_usage = 1
+GROUP BY
+    r.cobac_code,
+    r.libelle_cobac
+ORDER BY
+    r.cobac_code;
+
+
+-- =============================================================================
+-- 2. Ventilation Secteurs Institutionnels — v_fm1101_ventilation
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1101_ventilation AS
+SELECT
+    r.cobac_code                                        AS code_poste,
+    r.libelle_cobac                                     AS libelle_poste,
+
+    -- Secteur 1 : Administration centrale (id=23)
+    COALESCE(SUM(CASE WHEN cv.id = 23 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 23 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS administration_centrale,
+
+    -- Secteur 2 : Administrations locales (id=24)
+    COALESCE(SUM(CASE WHEN cv.id = 24 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 24 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS administrations_locales,
+
+    -- Secteur 3 : Administrations de sécurité sociale (id=25)
+    COALESCE(SUM(CASE WHEN cv.id = 25 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 25 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS admin_securite_sociale,
+
+    -- Secteur 4 : ISBLSM (id=26)
+    COALESCE(SUM(CASE WHEN cv.id = 26 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 26 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS isblsm,
+
+    -- Secteur 5 : Sociétés non-financières publiques (id=27)
+    COALESCE(SUM(CASE WHEN cv.id = 27 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 27 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS soc_nonfin_publiques,
+
+    -- Secteur 6 : Autres sociétés non-financières (id=28)
+    COALESCE(SUM(CASE WHEN cv.id = 28 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 28 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS autres_soc_nonfin,
+
+    -- Secteur 7 : Sociétés d'assurance et capitalisation (id=29)
+    COALESCE(SUM(CASE WHEN cv.id = 29 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 29 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS soc_assurance,
+
+    -- Secteur 8 : Auxiliaires financiers (id=30)
+    COALESCE(SUM(CASE WHEN cv.id = 30 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 30 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS auxiliaires_financiers,
+
+    -- Secteur 9 : Entreprises individuelles (id=31)
+    COALESCE(SUM(CASE WHEN cv.id = 31 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 31 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS entreprises_individuelles,
+
+    -- Secteur 10 : Particuliers (id=32)
+    COALESCE(SUM(CASE WHEN cv.id = 32 AND j.type_enum = 2 THEN j.amount
+                      WHEN cv.id = 32 AND j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS particuliers,
+
+    -- Total tous secteurs
+    COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN j.amount
+                      WHEN j.type_enum = 1 THEN -j.amount
+                      ELSE 0 END), 0)                   AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+-- Jointure via prêts
+LEFT JOIN m_loan_transaction lt
+    ON lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON l.id = lt.loan_id
+-- Jointure via épargnes
+LEFT JOIN m_savings_account_transaction sat
+    ON sat.id = j.savings_transaction_id
+LEFT JOIN m_savings_account sa
+    ON sa.id = sat.savings_account_id
+-- Client : prêt OU épargne
+LEFT JOIN m_client c
+    ON c.id = COALESCE(l.client_id, sa.client_id)
+LEFT JOIN m_code_value cv
+    ON cv.id = c.client_type_cv_id
+WHERE a.account_usage = 1
+-- Uniquement les comptes crédits et dépôts clientèle (codes COBAC)
+AND (
+    r.cobac_code LIKE 'C%'
+    OR r.cobac_code LIKE 'H%'
+)
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY r.cobac_code;
+
+
+-- =============================================================================
+-- 3. Capitaux Permanents — v_fm1103_capitaux_permanents
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1103_capitaux_permanents AS
+SELECT
+    r.cobac_code                                            AS code_poste,
+    r.libelle_cobac                                         AS libelle_poste,
+
+    -- Colonne 3 : Assimilables fonds propres durée résiduelle < 5 ans
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 3
+             AND TIMESTAMPDIFF(YEAR, CURDATE(), l.expected_maturedon_date) < 5
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 3
+             AND TIMESTAMPDIFF(YEAR, CURDATE(), l.expected_maturedon_date) < 5
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS assimil_fp_residuel_inf5,
+
+    -- Colonne 4 : Assimilables fonds propres durée résiduelle > 5 ans
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 3
+             AND TIMESTAMPDIFF(YEAR, CURDATE(), l.expected_maturedon_date) >= 5
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 3
+             AND TIMESTAMPDIFF(YEAR, CURDATE(), l.expected_maturedon_date) >= 5
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS assimil_fp_residuel_sup5,
+
+    -- Colonne 5 : Sous-total assimilables (3+4)
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 3
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 3
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS sous_total_assimil_fp,
+
+    -- Colonne 6 : Non assimilables durée initiale < 5 ans
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 2
+             AND TIMESTAMPDIFF(YEAR, l.expected_disbursedon_date, l.expected_maturedon_date) < 5
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 2
+             AND TIMESTAMPDIFF(YEAR, l.expected_disbursedon_date, l.expected_maturedon_date) < 5
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS non_assimil_initial_inf5,
+
+    -- Colonne 7 : Non assimilables durée initiale > 5 ans
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 2
+             AND TIMESTAMPDIFF(YEAR, l.expected_disbursedon_date, l.expected_maturedon_date) >= 5
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 2
+             AND TIMESTAMPDIFF(YEAR, l.expected_disbursedon_date, l.expected_maturedon_date) >= 5
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS non_assimil_initial_sup5,
+
+    -- Colonne 8 : Sous-total non assimilables (6+7)
+    COALESCE(SUM(
+        CASE WHEN a.classification_enum = 2
+             AND j.type_enum = 1 THEN j.amount
+             WHEN a.classification_enum = 2
+             AND j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS sous_total_non_assimil,
+
+    -- Colonne 9 : Total général
+    COALESCE(SUM(
+        CASE WHEN j.type_enum = 1 THEN j.amount
+             WHEN j.type_enum = 2 THEN -j.amount
+             ELSE 0 END
+    ), 0)                                                   AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+LEFT JOIN m_loan_transaction lt
+    ON lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON l.id = lt.loan_id
+WHERE a.account_usage = 1
+AND r.cobac_code IN (
+    'F400','F410','F420','F430','F440','F450','F460','F470',
+    'F630','F700','F811','F812','F813','F820','F830',
+    'F841','F850','F860','F870','F880','F8B0'
+)
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY r.cobac_code;
+
+
+-- =============================================================================
+-- 4. Correspondants — v_fm1104_correspondants
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1104_correspondants AS
+SELECT
+    r.cobac_code                                        AS code_poste,
+    r.libelle_cobac                                     AS libelle_poste,
+
+    -- Col 3 : Banque centrale (type_enum=1)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 1 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 1 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS banque_centrale,
+
+    -- Col 4 : Institutions financières spécialisées (type_enum=2)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 2 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 2 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS inst_fin_specialisees,
+
+    -- Col 5 : Banques associées (type_enum=3)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 3 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 3 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS banques_associees,
+
+    -- Col 6 : Banques non associées (type_enum=4)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 4 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 4 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS banques_non_associees,
+
+    -- Col 7 : Ets financiers associés (type_enum=5)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 5 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 5 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS ets_fin_associes,
+
+    -- Col 8 : Ets financiers non associés (type_enum=6)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 6 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 6 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS ets_fin_non_associes,
+
+    -- Col 9 : Caisses épargne postale (type_enum=7)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 7 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 7 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS caisses_epargne_postale,
+
+    -- Col 10 : Institutions financières internationales (type_enum=8)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 8 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 8 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS inst_fin_internationales,
+
+    -- Col 11 : EMF (type_enum=9)
+    COALESCE(SUM(CASE 
+        WHEN rc.type_enum = 9 AND j.type_enum = 2 THEN j.amount
+        WHEN rc.type_enum = 9 AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS emf,
+
+    -- Col 12 : Total
+    COALESCE(SUM(CASE 
+        WHEN j.type_enum = 2 THEN j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                 AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+LEFT JOIN ref_journal_entry_correspondant jec
+    ON jec.journal_entry_id = j.id
+LEFT JOIN ref_correspondant rc
+    ON rc.id = jec.correspondant_id
+WHERE a.account_usage = 1
+AND r.cobac_code IN (
+    'E2E0','E2F0','E2G0','E2B0','E260','E2C0',
+    'E4A0','E4B0','E500',
+    'E6A0','E6B0','E6C0','E6D0','E6E0','E6F0','E6G0','E6H0',
+    'E8BX','E8CX','E8DX','E8EX','E8FX','E8GX',
+    'L0C0','L0E0','L0F0','L0G0'
+)
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY r.cobac_code;
+
+
+-- =============================================================================
+-- 5. Durée Résiduelle Emplois/Ressources — v_fm1105_duree_residuelle
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1105_duree_residuelle AS
+SELECT
+    r.cobac_code                                        AS code_poste,
+    r.libelle_cobac                                     AS libelle_poste,
+    CASE 
+        WHEN r.cobac_code IN (
+            'A0B0','B6HX','B6JX','B74X','B7BX','B7CX',
+            'C0B0','C1B0','C2B0','E1A0','E1B0',
+            'E2A0','E2B0','E3A0','E400','M3B0'
+        ) THEN 'EMPLOI'
+        ELSE 'RESSOURCE'
+    END                                                 AS categorie,
+
+    -- Col 3 : Durée résiduelle <= 3 mois
+    COALESCE(SUM(CASE
+        WHEN TIMESTAMPDIFF(MONTH, CURDATE(), l.expected_maturedon_date) <= 3
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN TIMESTAMPDIFF(MONTH, CURDATE(), l.expected_maturedon_date) <= 3
+             AND j.type_enum = 1 THEN -j.amount
+        -- Comptes sans date de maturité : on les met en <= 3 mois par défaut
+        WHEN l.id IS NULL AND j.type_enum = 2 THEN  j.amount
+        WHEN l.id IS NULL AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS duree_inf_3mois,
+
+    -- Col 4 : Durée résiduelle > 3 mois
+    COALESCE(SUM(CASE
+        WHEN TIMESTAMPDIFF(MONTH, CURDATE(), l.expected_maturedon_date) > 3
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN TIMESTAMPDIFF(MONTH, CURDATE(), l.expected_maturedon_date) > 3
+             AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS duree_sup_3mois,
+
+    -- Col 5 : Total
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+LEFT JOIN m_loan_transaction lt
+    ON lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON l.id = lt.loan_id
+WHERE a.account_usage = 1
+AND r.cobac_code IN (
+    -- EMPLOIS
+    'A0B0','B6HX','B6JX','B74X','B7BX','B7CX',
+    'C0B0','C1B0','C2B0','E1A0','E1B0',
+    'E2A0','E2B0','E3A0','E400','M3B0',
+    -- RESSOURCES
+    'F630','F700','F810','F820','F830','F841','F850','F860','F870',
+    'H524','H534','H535','H545','H550','H560','H570','H6B0',
+    'K2A0','K2B0','K2C0','K2D0','K2P0','K3A0','K400','L0E0'
+)
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY categorie DESC, r.cobac_code;
+
+
+-- =============================================================================
+-- 6. Créances en Souffrance — v_fm1106_creances_souffrance
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1106_creances_souffrance AS
+
+-- C3B1 : Créances impayées (1 à 90 jours)
+SELECT
+    'C3B1'                                          AS code_poste,
+    'Créances impayées'                             AS libelle_poste,
+    COALESCE((
+        SELECT SUM(a.total_overdue_derived)
+        FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 1 AND 90
+    ), 0)                                           AS encours_debut,
+    0                                               AS diminution,
+    COALESCE((
+        SELECT SUM(a.total_overdue_derived)
+        FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 1 AND 90
+    ), 0)                                           AS augmentation,
+    COALESCE((
+        SELECT SUM(a.total_overdue_derived)
+        FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 1 AND 90
+    ), 0)                                           AS encours_fin
+
+UNION ALL
+
+-- C3B2 : Créances immobilisées (91 à 180 jours)
+SELECT
+    'C3B2', 'Créances immobilisées',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 91 AND 180), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 91 AND 180), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 91 AND 180), 0)
+
+UNION ALL
+
+-- C3X0 : Créances couvertes par garantie de l'Etat
+SELECT 'C3X0', 'Créances couvertes par la garantie de l Etat', 0, 0, 0, 0
+
+UNION ALL
+
+-- C3Y01 : Créances douteuses < 1 an (181 à 365 jours)
+SELECT
+    'C3Y01', 'Créances douteuses sûretés réelles moins d 1 an',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 181 AND 365), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 181 AND 365), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 181 AND 365), 0)
+
+UNION ALL
+
+-- C3Y02 : Créances douteuses 1 à 2 ans (366 à 730 jours)
+SELECT
+    'C3Y02', 'Créances douteuses sûretés réelles 1 à 2 ans',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 366 AND 730), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 366 AND 730), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 366 AND 730), 0)
+
+UNION ALL
+
+-- C3Y03 : Créances douteuses 2 à 3 ans (731 à 1095 jours)
+SELECT
+    'C3Y03', 'Créances douteuses sûretés réelles 2 à 3 ans',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 731 AND 1095), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 731 AND 1095), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) BETWEEN 731 AND 1095), 0)
+
+UNION ALL
+
+-- C3Y04 : Créances douteuses > 3 ans (> 1095 jours)
+SELECT
+    'C3Y04', 'Créances douteuses sûretés réelles plus de 3 ans',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 1095), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 1095), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 1095), 0)
+
+UNION ALL
+
+-- C3SM : Créances douteuses non couvertes (> 180 jours)
+SELECT
+    'C3SM', 'Créances douteuses non couvertes par sûretés',
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 180), 0),
+    0,
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 180), 0),
+    COALESCE((SELECT SUM(a.total_overdue_derived) FROM m_loan_arrears_aging a
+        WHERE TIMESTAMPDIFF(DAY, a.overdue_since_date_derived, CURDATE()) > 180), 0)
+
+UNION ALL
+
+-- C460 : Créances impayées crédit-bail
+SELECT 'C460', 'Créances impayées sur crédit-bail', 0, 0, 0, 0
+
+UNION ALL
+
+-- C470 : Créances douteuses crédit-bail
+SELECT 'C470', 'Créances douteuses sur crédit-bail', 0, 0, 0, 0
+
+UNION ALL
+
+-- C3B0 : TOTAL
+SELECT
+    'C3B0', 'TOTAL créances en souffrance',
+    COALESCE((SELECT SUM(total_overdue_derived) FROM m_loan_arrears_aging), 0),
+    0,
+    COALESCE((SELECT SUM(total_overdue_derived) FROM m_loan_arrears_aging), 0),
+    COALESCE((SELECT SUM(total_overdue_derived) FROM m_loan_arrears_aging), 0);
+
+
+-- =============================================================================
+-- 7. Durée Initiale Correspondants — v_fm1107_duree_initiale_correspondants
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1107_duree_initiale_correspondants AS
+SELECT
+    r.cobac_code                                        AS code_poste,
+    r.libelle_cobac                                     AS libelle_poste,
+    CASE
+        WHEN r.cobac_code IN ('E400','E4A0','E4B0','E4D0') THEN 'ACTIF'
+        ELSE 'PASSIF'
+    END                                                 AS categorie,
+
+    -- Col 3 : Durée initiale <= 3 ans
+    COALESCE(SUM(CASE
+        WHEN TIMESTAMPDIFF(YEAR,
+             l.expected_disbursedon_date,
+             l.expected_maturedon_date) <= 3
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN TIMESTAMPDIFF(YEAR,
+             l.expected_disbursedon_date,
+             l.expected_maturedon_date) <= 3
+             AND j.type_enum = 1 THEN -j.amount
+        -- Sans date : classé <= 3 ans par défaut
+        WHEN l.id IS NULL AND j.type_enum = 2 THEN  j.amount
+        WHEN l.id IS NULL AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS duree_inf_3ans,
+
+    -- Col 4 : Durée initiale > 3 ans
+    COALESCE(SUM(CASE
+        WHEN TIMESTAMPDIFF(YEAR,
+             l.expected_disbursedon_date,
+             l.expected_maturedon_date) > 3
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN TIMESTAMPDIFF(YEAR,
+             l.expected_disbursedon_date,
+             l.expected_maturedon_date) > 3
+             AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS duree_sup_3ans,
+
+    -- Col 5 : Total
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+LEFT JOIN m_loan_transaction lt
+    ON lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON l.id = lt.loan_id
+WHERE a.account_usage = 1
+AND r.cobac_code IN ('E4A0','E4B0','E4D0','K4A0','K4B0','K4D0')
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY categorie DESC, r.cobac_code;
+
+
+-- =============================================================================
+-- 8. Hypothèques et Garanties — v_fm1108_hypotheques
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1108_hypotheques AS
+SELECT
+    r.cobac_code                                        AS code_poste,
+    r.libelle_cobac                                     AS libelle_poste,
+
+    -- Col 3 : Encours couvert par hypothèque
+    COALESCE(SUM(CASE
+        WHEN lc.id IS NOT NULL
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN lc.id IS NOT NULL
+             AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS encours_couvert,
+
+    -- Col 4 : Encours non couvert
+    COALESCE(SUM(CASE
+        WHEN lc.id IS NULL
+             AND j.type_enum = 2 THEN  j.amount
+        WHEN lc.id IS NULL
+             AND j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS encours_non_couvert,
+
+    -- Col 5 : Total
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END
+    ), 0)                                               AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON j.account_id = a.id
+    AND j.reversed = 0
+LEFT JOIN m_loan_transaction lt
+    ON lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON l.id = lt.loan_id
+-- Jointure garanties : hypothèque = type_cv_id IN (IDs hypothèque 1er et 2ème rang)
+LEFT JOIN m_loan_collateral lc
+    ON lc.loan_id = l.id
+    AND lc.type_cv_id IN (
+        SELECT id FROM m_code_value
+        WHERE code_value IN ('Hypothèque 1er rang', 'Hypothèque 2ème rang')
+    )
+WHERE a.account_usage = 1
+AND r.cobac_code IN (
+    'C0C0','C0D0','C0E0','C0F0','C0G0','C0H0','C0J0','C0K0','C0L0',
+    'C1C0','C1D0','C1E0','C1F0','C1G0','C1H0','C1K0','C1L0',
+    'C2E0','C2F0','C2G0','C2H0','C2J0','C2K0','C2L0','C2M0','C2Q0','C2R0',
+    'C7B0','C7R0','C780','C7T0','C7U7','C7L0','C862','C877','C885'
+)
+GROUP BY r.cobac_code, r.libelle_cobac
+ORDER BY r.cobac_code;
+
+
+-- =============================================================================
+-- 9. Branches d'Activité — v_fm1109_credits_branches_activite
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1109_credits_branches_activite AS
+SELECT
+    r.libelle_cobac                                     AS libelle_poste,
+    r.cobac_code                                        AS code_poste,
+
+    -- Branche A
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche A%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche A%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_A,
+
+    -- Branche B
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche B%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche B%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_B,
+
+    -- Branche C
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche C%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche C%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_C,
+
+    -- Branche D
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche D%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche D%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_D,
+
+    -- Branche E
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche E%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche E%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_E,
+
+    -- Branche F
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche F%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche F%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_F,
+
+    -- Branche G
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche G%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche G%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_G,
+
+    -- Branche H
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche H%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche H%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_H,
+
+    -- Branche I
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche I%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche I%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_I,
+
+    -- Branche J
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche J%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche J%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_J,
+
+    -- Branche K
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche K%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche K%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_K,
+
+    -- Branche L
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche L%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche L%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_L,
+
+    -- Branche M
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche M%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche M%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_M,
+
+    -- Branche N
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche N%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche N%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_N,
+
+    -- Branche O
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche O%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche O%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_O,
+
+    -- Branche P
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche P%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche P%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_P,
+
+    -- Branche Q
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche Q%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche Q%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_Q,
+
+    -- Branche R
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche R%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche R%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_R,
+
+    -- Branche S
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche S%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche S%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_S,
+
+    -- Branche T
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche T%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche T%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_T,
+
+    -- Branche U
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche U%'
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv.code_value LIKE 'Branche U%'
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS branche_U,
+
+    -- Champ 24 : Total toutes branches
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+LEFT JOIN m_client c
+    ON  c.id = l.client_id
+LEFT JOIN m_code_value cv
+    ON  cv.id = c.client_classification_cv_id
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    -- Crédits à long terme
+    'C0B0','C0C0','C0D0','C0E0','C0F0','C0G0','C0H0','C0J0','C0K0','C0L0',
+    -- Crédits à moyen terme
+    'C1B0','C1C0','C1D0','C1E0','C1F0','C1G0','C1H0','C1K0','C1L0',
+    -- Crédits à court terme
+    'C2B0','C2E0','C2F0','C2G0','C2H0','C2J0','C2K0','C2L0',
+    'C2M0','C2Q0','C2R0',
+    -- Comptes débiteurs à vue
+    'C7B0','C7R0','C780','C7T0','C7U7','C7L0',
+    -- Autres
+    'C862','C877','C885',
+    -- Créances en souffrance
+    'C3B0','C3B1','C3B2','C3J0','C3Y0','C3Z0'
+  )
+
+GROUP BY r.cobac_code, r.libelle_cobac
+
+UNION ALL
+
+-- Ligne Total X11
+SELECT
+    'Total'  AS libelle_poste,
+    'X11'    AS code_poste,
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche A%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche A%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche B%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche B%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche C%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche C%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche D%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche D%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche E%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche E%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche F%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche F%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche G%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche G%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche H%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche H%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche I%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche I%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche J%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche J%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche K%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche K%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche L%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche L%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche M%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche M%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche N%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche N%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche O%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche O%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche P%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche P%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche Q%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche Q%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche R%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche R%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche S%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche S%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche T%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche T%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv.code_value LIKE 'Branche U%' AND j.type_enum = 2 THEN  j.amount WHEN cv.code_value LIKE 'Branche U%' AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN  j.amount WHEN j.type_enum = 1 THEN -j.amount ELSE 0 END), 0)
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+LEFT JOIN m_client c
+    ON  c.id = l.client_id
+LEFT JOIN m_code_value cv
+    ON  cv.id = c.client_classification_cv_id
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    'C0B0','C0C0','C0D0','C0E0','C0F0','C0G0','C0H0','C0J0','C0K0','C0L0',
+    'C1B0','C1C0','C1D0','C1E0','C1F0','C1G0','C1H0','C1K0','C1L0',
+    'C2B0','C2E0','C2F0','C2G0','C2H0','C2J0','C2K0','C2L0',
+    'C2M0','C2Q0','C2R0',
+    'C7B0','C7R0','C780','C7T0','C7U7','C7L0',
+    'C862','C877','C885',
+    'C3B0','C3B1','C3B2','C3J0','C3Y0','C3Z0'
+  )
+ORDER BY CASE code_poste WHEN 'X11' THEN 'ZZZZ' ELSE code_poste END;
+
+
+-- =============================================================================
+-- 10. Zones Géographiques — v_fm1110_credits_zones_geographiques
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1110_credits_zones_geographiques AS
+SELECT
+    r.libelle_cobac                                     AS libelle_poste,
+    r.cobac_code                                        AS code_poste,
+
+    -- Zone 1 : Adamaoua
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 1
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 1
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_1,
+
+    -- Zone 2 : Centre
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 2
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 2
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_2,
+
+    -- Zone 3 : Est
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 3
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 3
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_3,
+
+    -- Zone 4 : Extrême-Nord
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 4
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 4
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_4,
+
+    -- Zone 5 : Littoral
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 5
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 5
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_5,
+
+    -- Zone 6 : Nord
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 6
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 6
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_6,
+
+    -- Zone 7 : Nord-Ouest
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 7
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 7
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_7,
+
+    -- Zone 8 : Ouest
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 8
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 8
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_8,
+
+    -- Zone 9 : Sud
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 9
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 9
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_9,
+
+    -- Zone 10 : Sud-Ouest
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 10
+        AND j.type_enum = 2 THEN  j.amount
+        WHEN cv_state.code_score = 10
+        AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0) AS zone_10,
+
+    -- Zones 11 à 22 : autres pays CEMAC (à 0 pour un EMF Cameroun)
+    0 AS zone_11,
+    0 AS zone_12,
+    0 AS zone_13,
+    0 AS zone_14,
+    0 AS zone_15,
+    0 AS zone_16,
+    0 AS zone_17,
+    0 AS zone_18,
+    0 AS zone_19,
+    0 AS zone_20,
+    0 AS zone_21,
+    0 AS zone_22,
+
+    -- Champ 25 : Total
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS total
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+LEFT JOIN m_client c
+    ON  c.id = l.client_id
+-- Jointure vers l'adresse active du client
+LEFT JOIN m_client_address ca
+    ON  ca.client_id = c.id
+    AND ca.is_active = 1
+LEFT JOIN m_address addr
+    ON  addr.id = ca.address_id
+LEFT JOIN m_code_value cv_state
+    ON  cv_state.id      = addr.state_province_id
+    AND cv_state.code_id = 27
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    -- Crédits à long terme
+    'C0B0','C0C0','C0D0','C0E0','C0F0','C0G0','C0H0','C0J0','C0K0','C0L0',
+    -- Crédits à moyen terme
+    'C1B0','C1C0','C1D0','C1E0','C1F0','G1G0','C1H0','C1K0','C1L0',
+    -- Crédits à court terme
+    'C2B0','C2E0','C2F0','C2G0','C2H0','C2J0','C2K0','C2L0',
+    'C2M0','C2Q0','C2R0',
+    -- Comptes débiteurs à vue
+    'C7B0','C7R0','C780','C7T0','C7U7','C7L0',
+    -- Autres
+    'C862','C877','C885',
+    -- Créances en souffrance
+    'C3B0','C3B1','C3B2','C3J0','C3Y0','C3Z0'
+  )
+
+GROUP BY r.cobac_code, r.libelle_cobac
+
+UNION ALL
+
+-- Ligne Total X12
+SELECT
+    'Total'  AS libelle_poste,
+    'X12'    AS code_poste,
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 1  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 1  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 2  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 2  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 3  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 3  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 4  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 4  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 5  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 5  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 6  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 6  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 7  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 7  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 8  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 8  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 9  AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 9  AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cv_state.code_score = 10 AND j.type_enum = 2 THEN  j.amount WHEN cv_state.code_score = 10 AND j.type_enum = 1 THEN -j.amount ELSE 0 END), 0),
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    COALESCE(SUM(CASE WHEN j.type_enum = 2 THEN  j.amount WHEN j.type_enum = 1 THEN -j.amount ELSE 0 END), 0)
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+LEFT JOIN m_client c
+    ON  c.id = l.client_id
+LEFT JOIN m_client_address ca
+    ON  ca.client_id = c.id
+    AND ca.is_active = 1
+LEFT JOIN m_address addr
+    ON  addr.id = ca.address_id
+LEFT JOIN m_code_value cv_state
+    ON  cv_state.id      = addr.state_province_id
+    AND cv_state.code_id = 27
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    'C0B0','C0C0','C0D0','C0E0','C0F0','C0G0','C0H0','C0J0','C0K0','C0L0',
+    'C1B0','C1C0','C1D0','C1E0','C1F0','C1G0','C1H0','C1K0','C1L0',
+    'C2B0','C2E0','C2F0','C2G0','C2H0','C2J0','C2K0','C2L0',
+    'C2M0','C2Q0','C2R0',
+    'C7B0','C7R0','C780','C7T0','C7U7','C7L0',
+    -- Autres
+    'C862','C877','C885',
+    -- Créances en souffrance
+    'C3B0','C3B1','C3B2','C3J0','C3Y0','C3Z0'
+  )
+ORDER BY CASE code_poste WHEN 'X12' THEN 'ZZZZ' ELSE code_poste END;
+
+
+-- =============================================================================
+-- 11. Groupes de Bénéficiaires — v_fm1111_groupes_beneficiaires
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1111_groupes_beneficiaires AS
+SELECT
+    c.display_name                                  AS nom_client,
+    -- Code poste RDR02 à RDR99 : numérotation séquentielle par ordre décroissant de crédit
+    CONCAT('RDR', LPAD(
+        ROW_NUMBER() OVER (ORDER BY COALESCE(credits.total_credit, 0) DESC) + 1,
+        2, '0'
+    ))                                              AS code_poste,
+    rgb.groupe_nom                                  AS groupe_appartenance,
+    rgb.nature_lien                                 AS nature_lien,
+
+    -- Champ 5 : Crédits par caisse (encours prêts actifs)
+    COALESCE(credits.total_credit, 0)               AS credits_par_caisse,
+
+    -- Champ 6 : Engagements par signature (non géré nativement → 0)
+    0                                               AS engagements_par_signature,
+
+    -- Champ 7 : Dépôts de toute nature (épargne)
+    COALESCE(depots.total_depot, 0)                 AS depots
+
+FROM ref_groupe_beneficiaire rgb
+JOIN m_client c
+    ON  c.id          = rgb.client_id
+    AND c.status_enum = 300  -- clients actifs uniquement
+    AND rgb.is_active = 1
+
+-- Sous-requête crédits : somme des encours de prêts actifs/décaissés
+LEFT JOIN (
+    SELECT
+        l.client_id,
+        SUM(l.principal_outstanding_derived
+          + l.interest_outstanding_derived
+          + l.fee_charges_outstanding_derived
+          + l.penalty_charges_outstanding_derived) AS total_credit
+    FROM m_loan l
+    WHERE l.loan_status_id IN (300, 700)
+    -- 300 = actif, 700 = en souffrance
+    GROUP BY l.client_id
+) credits ON credits.client_id = c.id
+
+-- Sous-requête dépôts : solde épargne active
+LEFT JOIN (
+    SELECT
+        sa.client_id,
+        SUM(sa.account_balance_derived) AS total_depot
+    FROM m_savings_account sa
+    WHERE sa.status_enum = 300  -- compte épargne actif
+    GROUP BY sa.client_id
+) depots ON depots.client_id = c.id
+
+ORDER BY COALESCE(credits.total_credit, 0) DESC;
+
+
+-- =============================================================================
+-- 12. Engagements Hors-Bilan Douteux — v_fm1116_engagements_horsbilan_douteux
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1116_engagements_horsbilan_douteux AS
+SELECT
+    r.libelle_cobac                                         AS libelle_poste,
+    r.cobac_code                                            AS code_poste,
+
+    -- Champ 3 : Encours brut
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS encours_brut,
+
+    -- Champ 4 : Provision existante (non gérée nativement → 0 pour l'instant)
+    0                                                       AS provision_existante,
+
+    -- Champ 5 : Encours net (= brut - provision)
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS encours_net
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    'M2A0','N4C0','Q8G0','N4D0','Q8H0','Q8J0','Q8L0','Q8M0','Q8N0'
+  )
+GROUP BY r.cobac_code, r.libelle_cobac
+
+UNION ALL
+
+-- Ligne Total X57
+SELECT
+    'Total'  AS libelle_poste,
+    'X57'    AS code_poste,
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS encours_brut,
+    0                                                       AS provision_existante,
+    COALESCE(SUM(CASE
+        WHEN j.type_enum = 2 THEN  j.amount
+        WHEN j.type_enum = 1 THEN -j.amount
+        ELSE 0 END), 0)                                     AS encours_net
+
+FROM acc_gl_account a
+JOIN ref_cobac_pcemf r ON r.pcemf_code = a.gl_code COLLATE utf8mb4_unicode_ci
+LEFT JOIN acc_gl_journal_entry j
+    ON  j.account_id = a.id
+    AND j.reversed   = 0
+LEFT JOIN m_loan_transaction lt
+    ON  lt.id = j.loan_transaction_id
+LEFT JOIN m_loan l
+    ON  l.id = lt.loan_id
+
+WHERE a.account_usage = 1
+  AND r.cobac_code IN (
+    'M2A0','N4C0','Q8G0','N4D0','Q8H0','Q8J0','Q8L0','Q8M0','Q8N0'
+  )
+ORDER BY CASE code_poste WHEN 'X57' THEN 'ZZZZ' ELSE code_poste END;
+
+
+-- =============================================================================
+-- 13. Participations dans le Capital — v_fm1117_participations_capital
+-- =============================================================================
+CREATE OR REPLACE VIEW v_fm1117_participations_capital AS
+SELECT
+    p.raison_sociale                                       AS raison_sociale,
+    CONCAT('PP', LPAD(
+        ROW_NUMBER() OVER (ORDER BY p.montant DESC) + 3,
+        2, '0'
+    ))                                                      AS code_poste,
+
+    -- Champ 3 : Etablissement de crédit
+    CASE WHEN p.type_entite = 'ETABLISSEMENT_CREDIT' 
+         THEN p.montant ELSE 0 END                          AS etablissement_credit,
+
+    -- Champ 4 : Etablissement de Microfinance
+    CASE WHEN p.type_entite = 'EMF' 
+         THEN p.montant ELSE 0 END                          AS etablissement_microfinance,
+
+    -- Champ 5 : Autres
+    CASE WHEN p.type_entite = 'AUTRE' 
+         THEN p.montant ELSE 0 END                          AS autres,
+
+    -- Champ 6 : Total
+    p.montant                                                AS total
+
+FROM ref_participation_capital p
+WHERE p.is_active = 1
+ORDER BY p.montant DESC;

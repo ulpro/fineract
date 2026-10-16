@@ -28,6 +28,7 @@ import org.apache.fineract.accounting.glaccount.data.GLAccountData;
 import org.apache.fineract.accounting.producttoaccountmapping.data.ChargeToGLAccountMapper;
 import org.apache.fineract.accounting.producttoaccountmapping.data.PaymentTypeToGLAccountMapper;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.kyc.data.KycTierData;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.products.data.ProductData;
@@ -69,6 +70,21 @@ public final class ShareProductData implements ProductData {
     final Collection<EnumOptionData> minimumActivePeriodFrequencyTypeOptions;
     final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions;
     private final Map<String, List<GLAccountData>> accountingMappingOptions;
+
+    @Getter
+    private KycTierData kycTier;
+    @Getter
+    private Collection<KycTierData> kycTierOptions;
+
+    public ShareProductData withKycTier(final KycTierData kycTier) {
+        this.kycTier = kycTier;
+        return this;
+    }
+
+    public ShareProductData withKycTierOptions(final Collection<KycTierData> kycTierOptions) {
+        this.kycTierOptions = kycTierOptions;
+        return this;
+    }
 
     private ShareProductData(final Long id, final String name, final String shortName, final String description, final String externalId,
             final CurrencyData currency, final Long totalShares, final Long totalSharesIssued, final BigDecimal unitPrice,
@@ -184,23 +200,25 @@ public final class ShareProductData implements ProductData {
             final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions,
             final Map<String, List<GLAccountData>> accountingMappingOptions) {
 
-        return new ShareProductData(data.id, data.name, data.shortName, data.description, data.externalId, data.currency, data.totalShares,
+        final ShareProductData productData = new ShareProductData(data.id, data.name, data.shortName, data.description, data.externalId, data.currency, data.totalShares,
                 data.totalSharesIssued, data.unitPrice, data.shareCapital, data.minimumShares, data.nominalShares, data.maximumShares,
                 data.marketPrice, data.charges, data.allowDividendCalculationForInactiveClients, data.lockinPeriod, data.lockPeriodTypeEnum,
                 data.minimumActivePeriod, data.minimumActivePeriodForDividendsTypeEnum, data.accountingRule, data.accountingMappings,
                 data.paymentChannelToFundSourceMappings, data.feeToGLAccountMappings, currencyOptions, chargeOptions,
                 minimumActivePeriodFrequencyTypeOptions, lockinPeriodFrequencyTypeOptions, accountingMappingOptions);
+        return productData.withKycTier(data.kycTier);
     }
 
     public static ShareProductData withAccountingDetails(final ShareProductData data, final Map<String, Object> accountingMappings,
             final Collection<PaymentTypeToGLAccountMapper> paymentChannelToFundSourceMappings,
             final Collection<ChargeToGLAccountMapper> feeToGLAccountMappings) {
-        return new ShareProductData(data.id, data.name, data.shortName, data.description, data.externalId, data.currency, data.totalShares,
+        final ShareProductData productData = new ShareProductData(data.id, data.name, data.shortName, data.description, data.externalId, data.currency, data.totalShares,
                 data.totalSharesIssued, data.unitPrice, data.shareCapital, data.minimumShares, data.nominalShares, data.maximumShares,
                 data.marketPrice, data.charges, data.allowDividendCalculationForInactiveClients, data.lockinPeriod, data.lockPeriodTypeEnum,
                 data.minimumActivePeriod, data.minimumActivePeriodForDividendsTypeEnum, data.accountingRule, accountingMappings,
                 paymentChannelToFundSourceMappings, feeToGLAccountMappings, data.currencyOptions, data.chargeOptions,
                 data.minimumActivePeriodFrequencyTypeOptions, data.lockinPeriodFrequencyTypeOptions, data.accountingMappingOptions);
+        return productData.withKycTier(data.kycTier);
     }
 
     private ShareProductData(final Long id, final String name, final String shortName, final Long totalShares) {

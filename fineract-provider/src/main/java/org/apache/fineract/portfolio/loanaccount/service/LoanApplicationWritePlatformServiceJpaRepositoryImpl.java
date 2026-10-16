@@ -573,6 +573,8 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         final Loan loan = loanAndChanges.getLeft();
         final Map<String, Object> changes = loanAndChanges.getRight();
 
+        this.loanAssembler.validateClientKycTierForProduct(loan.getClient(), loan.getLoanProduct());
+
         if (!changes.isEmpty()) {
             final String noteText = command.stringValueOfParameterNamed("note");
             createNote(noteText, loan).ifPresent(note -> changes.put("note", noteText));
