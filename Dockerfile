@@ -1,7 +1,7 @@
 # ==============================================================================
 # STAGE 1: Build the application and custom modules
 # ==============================================================================
-FROM eclipse-temurin:21-jdk AS builder
+FROM eclipse-temurin:25-jdk AS builder
 
 # Increase connection and read timeouts for the Gradle wrapper download to prevent network timeouts
 ENV GRADLE_OPTS="-Dhttp.connectionTimeout=120000 -Dhttp.socketTimeout=120000 -Dorg.gradle.wrapper.connection.timeout=120000 -Dorg.gradle.wrapper.socket.timeout=120000"
@@ -36,7 +36,7 @@ RUN mkdir -p /tmp/extracted && \
 # ==============================================================================
 # STAGE 2: Lightweight runtime image with Font Support (Crucial for Pentaho)
 # ==============================================================================
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 
 # Install fontconfig and ttf-dejavu fonts (REQUIRED by Pentaho for PDF/HTML report rendering)
 RUN apk add --no-cache fontconfig ttf-dejavu
