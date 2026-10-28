@@ -26,7 +26,7 @@ RUN npm run build -- --configuration production
 # ==============================================================================
 # STAGE 2: Serve the application using Nginx
 # ==============================================================================
-FROM nginx:1.25-alpine
+FROM nginx:1.30-alpine
 
 # Install envsubst for runtime environment variable substitution
 RUN apk add --no-cache gettext
